@@ -1,0 +1,14 @@
+{
+  "name": "tent-post",
+  "version": "0.0.0",
+  "main": "post.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Hendrik Cech",
+  "license": "MIT",
+  "dependencies": {
+    "request": "~2.14.0",
+    "qs": "~0.5.3"
+  }
+}
