@@ -7,20 +7,24 @@ module.exports = function(method, url, parameters, callback) {
 
 	var reqOpt = {
 		'method': method,
-		'url': url
+		'url': url,
+		'headers': {
+			'Accept': 'application/vnd.tent.v0+json'
+		}
 	}
+
 	if(parameters) {
 		method.toLowerCase()
 		if(method === 'get') {
 			reqOpt.url += '?' + qs.stringify(parameters)
 			console.log(reqOpt.url)
 		} else {
+			reqOpt.headers['Content-Type'] = 'application/vnd.tent.v0+json'
 			reqOpt.body = JSON.stringify(parameters)
 		}
 	}
 	request(reqOpt, function(err, res, body) {
 		if(err) return callback(err)
-		//console.log(res)
-		console.log(JSON.parse(body))
+		callback(null, body)
 	})
 }
