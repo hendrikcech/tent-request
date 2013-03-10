@@ -1,14 +1,31 @@
 {
-  "name": "tent-post",
+  "name": "tent-request",
+  "description": "Performes requests against a Tent server"
   "version": "0.0.0",
   "main": "post.js",
+  "keywords": [
+    "tent",
+    "post",
+    "request",
+    "api"
+  ],
+  "repository": {
+    "type": "git",
+    "url": ""
+  },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "author": "Hendrik Cech",
+  "author": {
+    "name": "Hendrik Cech",
+    "email": "hendrik.cech@gmail.com"
+  },
   "license": "MIT",
   "dependencies": {
     "request": "~2.14.0",
     "qs": "~0.5.3"
+  },
+  "devDependencies": {
+    "tap": "~0.4.0"
   }
 }
