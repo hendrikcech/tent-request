@@ -14,8 +14,8 @@ var app = {
   }
 }
 
-//tent('get', 'https://hendrik.tent.is/tent/followings', {'limit':2}, function(err, followings) {
-tent('post', 'https://hendrik.tent.is/tent/apps', app, function(err, followings) {
+//tent('get', 'https://hendrik.tent.is/tent/followings', null, {'limit':2}, function(err, followings) {
+tent('post', 'https://hendrik.tent.is/tent/apps', null, app, function(err, followings) {
 	if(err) return console.log(err)
 	console.log(followings)
 })
