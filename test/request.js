@@ -10,7 +10,7 @@ test('get request with options (/followings)', function(t) {
 	})
 })
 
-test('authenticated post request (/apps)', function(t) {
+test('post request (/apps)', function(t) {
 	var app = {
 		"name": "FooApp",
 		"description": "Does amazing foos with your data",

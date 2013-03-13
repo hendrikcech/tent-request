@@ -7,8 +7,10 @@ module.exports = function(method, url, auth, parameters, callback, debug) {
 
 	if(!method) throw new Error("argument 'method' required")
 	if(!url) throw new Error("argument 'url' required")
-	if(auth) {
-		if(!auth.mac_key || !auth.mac_key_id) throw new Error("for auth, mac_key AND mac_key_id are required")
+	if(auth) { 
+		if(!auth.mac_key || (!auth.mac_key_id && !auth.access_token))
+			throw new Error("for auth, mac_key AND mac_key_id/access_token are required")
+		if(!auth.mac_key_id) auth.mac_key_id = auth.access_token
 		authReq = true
 		if(debug) console.log('auth request!')
 	}
@@ -33,28 +35,26 @@ module.exports = function(method, url, auth, parameters, callback, debug) {
 		}
 	}
 
-	if(!authReq) return makeReq(reqOpt, debug, callback) //breakpoint for no-auth requests
+	//breakpoint for no-auth requests
+	if(!authReq) return makeReq(reqOpt, debug, callback)
 
-	reqOpt.headers['Authorization'] = 'MAC '
-
+	//timestamp
 	var ts = Math.round(Date.now() / 1000)
-	reqOpt.headers['Authorization'] += 'ts=\"' + ts + '\"'
 
-	//create nonce http://www.mediacollege.com/internet/javascript/number/random.html
+	//nonce http://www.mediacollege.com/internet/javascript/number/random.html
 	var chars = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXTZabcdefghiklmnopqrstuvwxyz"
 	var nonce = ''
 	for (var i=0; i<6; i++) {
 		var rnum = Math.floor(Math.random() * chars.length)
 		nonce += chars.substring(rnum,rnum+1)
 	}
-	reqOpt.headers['Authorization'] += ', nonce=\"'+ nonce +'\"'
 
 
 	/*host - path splitting out of url
 		eg:
 			url: https://hendrik.tent.is/tent/authorize
-			host: hendrik.tent.is
-			path: /tent/authorize
+			=> host: hendrik.tent.is
+			=> path: /tent/authorize
 	*/
 	var urlWithout = url.replace(/(https:\/\/|http:\/\/)/g, '') // => hendrik.tent.is/tent/authorize
 	var parts = urlWithout.split('/')							// => [hendrik.tent.is, tent, authorize]
@@ -89,10 +89,16 @@ module.exports = function(method, url, auth, parameters, callback, debug) {
 }
 
 function makeReq(reqOpt, debug, callback) {
-	if(debug) console.log('final reqOptions:\n' + reqOpt)
+	if(debug) {
+		console.log('final reqOptions:')
+		console.log(reqOpt)
+	}
 	request(reqOpt, function(err, resp, body) {
 		if(err) return callback(err)
-		if(body) body = JSON.parse(body)
+		console.log('body:')
+		console.log(typeof body)
+		console.log(resp)
+		if(typeof body === 'string') body = JSON.parse(body)
 		callback(null, body, resp)
 	})
 }
