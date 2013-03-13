@@ -41,3 +41,11 @@ test('head request (entity)', function(t) {
 		t.end()
 	})
 })
+
+test('authorized request', function(t) {
+	request('post', 'http://example.com', { mac_key: '2aksdfj23', mac_key_id: '23842384' }, null, function(err, res) {
+		t.ok(!err, 'error returned: '+err)
+		t.ok(res, 'result returned')
+		t.end()
+	})
+})

@@ -1,6 +1,7 @@
 var request = require('request')
 var qs = require('qs')
 var crypto = require('crypto')
+var urlModule = require('url')
 
 module.exports = function(method, url, auth, parameters, callback, debug) {
 	var authReq = false
@@ -12,7 +13,8 @@ module.exports = function(method, url, auth, parameters, callback, debug) {
 			throw new Error("for auth, mac_key AND mac_key_id/access_token are required")
 		if(!auth.mac_key_id) auth.mac_key_id = auth.access_token
 		authReq = true
-		if(debug) console.log('auth request!')
+		if(debug) console.log('auth request:')
+		if(debug) console.log(auth)
 	}
 	
 	var tentHeader = 'application/vnd.tent.v0+json'
@@ -49,35 +51,16 @@ module.exports = function(method, url, auth, parameters, callback, debug) {
 		nonce += chars.substring(rnum,rnum+1)
 	}
 
-
-	/*host - path splitting out of url
-		eg:
-			url: https://hendrik.tent.is/tent/authorize
-			=> host: hendrik.tent.is
-			=> path: /tent/authorize
-	*/
-	var urlWithout = url.replace(/(https:\/\/|http:\/\/)/g, '') // => hendrik.tent.is/tent/authorize
-	var parts = urlWithout.split('/')							// => [hendrik.tent.is, tent, authorize]
-	var host = parts[0]											// hendrik.tent.is -> READY
-
-	if(parts.length > 0) {
-		parts.splice(0, 1)										// remove first element => [tent, authorize]
-		var path = '/' + parts.join('/')						// => /tent/authorize	
-	}
-
-	if(/^https:\/\//.test(url)) {								// => https
-		var port = 443
-	} else {													// => http
-		var port = 80
-	}
+	var parsedUrl = urlModule.parse(url)
+	if(!parsedUrl.port) parsedUrl.port = (parsedUrl.protocol === 'https:') ? 443 : 80
 
 	var normalizedRequestString = ""
 		+ ts + '\n'
 		+ nonce + '\n'
 		+ method + '\n'
-		+ path + '\n'
-		+ host + '\n'
-		+ port + '\n'
+		+ parsedUrl.path + '\n'
+		+ parsedUrl.hostname + '\n'
+		+ parsedUrl.port + '\n'
 		+ '\n'
 	if(debug) console.log('reqString:\n'+normalizedRequestString)	
 
@@ -95,10 +78,10 @@ function makeReq(reqOpt, debug, callback) {
 	}
 	request(reqOpt, function(err, resp, body) {
 		if(err) return callback(err)
-		console.log('body:')
-		console.log(typeof body)
-		console.log(resp)
-		if(typeof body === 'string') body = JSON.parse(body)
+		if(typeof body === 'string') {
+			body = JSON.parse(body)
+			if(body.error) return callback(body.error)
+		}
 		callback(null, body, resp)
 	})
 }
