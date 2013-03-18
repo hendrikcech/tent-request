@@ -78,10 +78,10 @@ function makeReq(reqOpt, debug, callback) {
 	}
 	request(reqOpt, function(err, resp, body) {
 		if(err) return callback(err)
-		if(typeof body === 'string') {
+		try {
 			body = JSON.parse(body)
 			if(body.error) return callback(body.error)
-		}
+		} catch(e) {}
 		callback(null, body, resp)
 	})
 }
