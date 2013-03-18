@@ -66,7 +66,11 @@ module.exports = function(method, url, auth, parameters, callback, debug) {
 
 	var key = crypto.createHmac('SHA256', auth.mac_key).update(normalizedRequestString).digest('base64')
 
-	reqOpt.headers['Authorization'] = 'MAC id=\"'+auth.mac_key_id+'\", ts=\"'+ts+'\", nonce=\"'+nonce+'\", mac=\"'+key+'\"'
+	reqOpt.headers.Authorization = ''
+		+ 'MAC id=\"' + auth.mac_key_id + '\"'
+		+ ', ts=\"' + ts + '\"'
+		+ ', nonce=\"' + nonce + '\"'
+		+ ', mac=\"' + key + '\"'
 
 	makeReq(reqOpt, debug, callback)
 }
