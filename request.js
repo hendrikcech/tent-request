@@ -1,44 +1,47 @@
-var request = require('request')
+var http = require('http')
+var https = require('https')
 var qs = require('qs')
 var crypto = require('crypto')
 var urlModule = require('url')
 
-module.exports = function(method, url, auth, parameters, callback, debug) {
+"use strict"
+
+module.exports = function(opt, callback, debug) { //method, url, auth, parameters,
 	var authReq = false
 
-	if(!method) throw new Error("argument 'method' required")
-	if(!url) throw new Error("argument 'url' required")
-	if(auth) { 
-		if(!auth.mac_key || (!auth.mac_key_id && !auth.access_token))
+	//validate options
+	if(!opt.method) throw new Error("argument 'method' required")
+	if(!opt.url) throw new Error("argument 'url' required")
+	if(opt.auth) { 
+		if(!opt.auth.mac_key || (!opt.auth.mac_key_id && !opt.auth.access_token))
 			throw new Error("for auth, mac_key AND mac_key_id/access_token are required")
-		if(!auth.mac_key_id) auth.mac_key_id = auth.access_token
+		if(!opt.auth.mac_key_id) opt.auth.mac_key_id = opt.auth.access_token
 		authReq = true
-		if(debug) console.log('auth request:')
-		if(debug) console.log(auth)
+		if(debug) console.log('authenticated request')
 	}
 	
 	var tentHeader = 'application/vnd.tent.v0+json'
 
-	var reqOpt = {
-		'method': method,
-		'url': url,
-		'headers': {
-			'Accept': tentHeader
-		}
-	}
+	var reqOpt = urlModule.parse(opt.url)
 
-	if(parameters) {
-		var method = method.toUpperCase()
-		if(method === 'GET') {
-			reqOpt.url += '?' + qs.stringify(parameters)
+	reqOpt.method = opt.method.toUpperCase()
+	reqOpt.headers = {}
+	reqOpt.headers.Accept = tentHeader
+
+	if(opt.param) {
+		if(reqOpt.method === 'GET') {
+			var queryString = '?' + qs.stringify(opt.param)
+			if(reqOpt.path === '/') reqOpt.path = queryString
+			else reqOpt.path += queryString
 		} else {
 			reqOpt.headers['Content-Type'] = tentHeader
-			reqOpt.body = JSON.stringify(parameters)
+			reqOpt.body = JSON.stringify(opt.param) //belongs here?
 		}
 	}
 
 	//breakpoint for no-auth requests
-	if(!authReq) return makeReq(reqOpt, debug, callback)
+	if(!authReq) return makeReq(reqOpt, callback, debug)
+
 
 	//timestamp
 	var ts = Math.round(Date.now() / 1000)
@@ -51,41 +54,58 @@ module.exports = function(method, url, auth, parameters, callback, debug) {
 		nonce += chars.substring(rnum,rnum+1)
 	}
 
-	var parsedUrl = urlModule.parse(url)
-	if(!parsedUrl.port) parsedUrl.port = (parsedUrl.protocol === 'https:') ? 443 : 80
+	if(!reqOpt.port) reqOpt.port = (reqOpt.protocol === 'https:') ? 443 : 80
 
 	var normalizedRequestString = ""
 		+ ts + '\n'
 		+ nonce + '\n'
-		+ method + '\n'
-		+ parsedUrl.path + '\n'
-		+ parsedUrl.hostname + '\n'
-		+ parsedUrl.port + '\n'
+		+ reqOpt.method + '\n'
+		+ reqOpt.path + '\n'
+		+ reqOpt.hostname + '\n'
+		+ reqOpt.port + '\n'
 		+ '\n'
-	if(debug) console.log('reqString:\n'+normalizedRequestString)	
 
-	var key = crypto.createHmac('SHA256', auth.mac_key).update(normalizedRequestString).digest('base64')
+	var key = crypto.createHmac('SHA256', opt.auth.mac_key)
+					.update(normalizedRequestString)
+					.digest('base64')
 
 	reqOpt.headers.Authorization = ''
-		+ 'MAC id=\"' + auth.mac_key_id + '\"'
+		+ 'MAC id=\"' + opt.auth.mac_key_id + '\"'
 		+ ', ts=\"' + ts + '\"'
 		+ ', nonce=\"' + nonce + '\"'
 		+ ', mac=\"' + key + '\"'
 
-	makeReq(reqOpt, debug, callback)
+	makeReq(reqOpt, callback, debug)
 }
 
-function makeReq(reqOpt, debug, callback) {
+function makeReq(reqOpt, callback, debug) {
 	if(debug) {
 		console.log('final reqOptions:')
 		console.log(reqOpt)
 	}
-	request(reqOpt, function(err, resp, body) {
-		if(err) return callback(err)
-		try {
-			body = JSON.parse(body)
-			if(body.error) return callback(body.error)
-		} catch(e) {}
-		callback(null, body, resp)
+
+	var interface = (reqOpt.protocol === 'https:') ? https : http
+
+	var req = interface.request(reqOpt, function(res) {
+		if(debug) console.log('STATUS:', res.statusCode)
+		if(debug) console.log('HEADERS:', JSON.stringify(res.headers))
+		if(res.statusCode !== 200)
+			return callback(new Error('got bad statusCode: ' + res.statusCode))
+		res.setEncoding('utf8')
+
+		var all = ''
+		res.on('data', function (chunk) {
+			all += chunk
+		})
+		res.on('end', function() {
+			callback(null, JSON.parse(all))
+		})
 	})
+
+	req.on('error', function(err) {
+		return callback(err)
+	})
+
+	if(reqOpt.body) req.write(reqOpt.body)
+	req.end()
 }
