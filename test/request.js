@@ -1,51 +1,95 @@
-var test = require('tap').test
+var vows = require('vows')
+var assert = require('assert')
 var request = require('../request')
+var config = require('./config')
 
-test('get request with options (/followings)', function(t) {
-	request('get', 'https://hendrik.tent.is/tent/followings', null, {limit: 2}, function(err, res) {
-		t.ok(!err, 'error returned: '+err)
-		t.ok(res, 'no result returned')
-		t.type(res, 'object', 'result typeof object')
-		t.end()
-	})
-})
-
-test('post request (/apps)', function(t) {
-	var app = {
-		"name": "FooApp",
-		"description": "Does amazing foos with your data",
-		"url": "http://example.com",
-		"icon": "http://example.com/icon.png",
-		"redirect_uris": [
-			"https://app.example.com/tent/callback"
-		],
-		"scopes": {
-			"write_profile": "Uses an app profile section to describe foos",
-			"read_followings": "Calculates foos based on your followings"
-		}
+function assertError() {
+	return function(err, res) {
+		assert.isNull(err)
 	}
+}
+function assertResponse() {
+	return function(err, res) {
+		assert.equal(typeof res, 'object')
+	}
+}
+function assertResponseContent(keys) {
+	return function(err, res) {
+		keys.map(function(key) {
+			assert.include(res, key)
+		})
+	}
+}
 
-	request('post', 'https://hendrik.tent.is/tent/apps', null, app, function(err, res) {
-		t.ok(!err, 'error returned: '+err)
-		t.ok(res, 'no result returned')
-		t.type(res, 'object', 'result typeof object')
-		t.end()
-	})
-})
+vows.describe('Request resources').addBatch({
+	'GET with parameter (/posts)': {
+		topic: function() {
+			var opt = {
+				method: 'get',
+				url: config.server + '/posts',
+				param: {
+					limit: 2
+				}
+			}
+			request(opt, this.callback)
+		},
 
-test('head request (entity)', function(t) {
-	request('head', 'https://hendrik.tent.is', null, null, function(err, body, resp) {
-		t.ok(!err, 'error returned: '+err)
-		t.ok(resp, 'no result returned')
-		t.type(resp, 'object', 'result typeof object')
-		t.end()
-	})
-})
+		'returns no error': assertError(),
+		'returns object (no string)': assertResponse(),
+		'returns 2 posts': function(err, posts) {
+			assert.equal(Object.keys(posts).length, 2)
+		}
+	},
+	'POST with parameters (/apps)': {
+		topic: function() {
+			var opt = {
+				method: 'post',
+				url: config.server + '/apps',
+				param: {
+					"name": "FooApp",
+					"description": "Does amazing foos with your data",
+					"url": "http://example.com",
+					"icon": "http://example.com/icon.png",
+					"redirect_uris": [
+					  "https://app.example.com/tent/callback"
+					],
+					"scopes": {
+					  "write_profile": "Uses an app profile section to describe foos",
+					  "read_followings": "Calculates foos based on your followings"
+					}
+				}
+			}
+			request(opt, this.callback)
+		},
 
-test('authorized request', function(t) {
-	request('post', 'http://example.com', { mac_key: '2aksdfj23', mac_key_id: '23842384' }, null, function(err, res) {
-		t.ok(!err, 'error returned: '+err)
-		t.ok(res, 'result returned')
-		t.end()
-	})
-})
+		'returns no error': assertError(),
+		'returns object (no string)': assertResponse(),
+		'response content seems to be valid': assertResponseContent(
+			['name', 'scopes', 'icon']
+		)
+	},
+	'PUT with parameters and authentication (/profile)': {
+		topic: function() {
+			var opt = {
+				method: 'put',
+				url: config.server + '/profile/https%3A%2F%2Ftent.io%2Ftypes%2Finfo%2Fbasic%2Fv0.1.0',
+				auth: config.auth,
+				param: {
+					"avatar_url" : "http://www.gravatar.com/avatar/5a21fcfa05ac7d496a399e44c6cc60a8.png?size=200",
+					"bio" : "",
+					"birthdate" : "01.07.1995",
+					"gender" : "",
+					"location" : "Braunschweig, Germany",
+					"name" : "Hendrik Cech"
+				}
+			}
+			request(opt, this.callback)
+		},
+
+		'returns no error': assertError(),
+		'returns object (no string)': assertResponse(),
+		'response content seems to be valid': assertResponseContent(
+			['https://tent.io/types/info/basic/v0.1.0']
+		)
+	}
+}).export(module)

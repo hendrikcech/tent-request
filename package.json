@@ -14,7 +14,7 @@
     "url": ""
   },
   "scripts": {
-    "test": "tap ./test"
+    "test": "vows ./test/*.js --spec"
   },
   "author": {
     "name": "Hendrik Cech",
@@ -26,6 +26,6 @@
     "qs": "~0.5.3"
   },
   "devDependencies": {
-    "tap": "~0.4.0"
+    "vows": "~0.7.0"
   }
 }
