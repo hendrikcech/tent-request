@@ -17,7 +17,7 @@ module.exports = function(opt, callback, debug) { //method, url, auth, parameter
 			throw new Error("for auth, mac_key AND mac_key_id/access_token are required")
 		if(!opt.auth.mac_key_id) opt.auth.mac_key_id = opt.auth.access_token
 		authReq = true
-		if(debug) console.log('authenticated request')
+		if(debug) console.log('AUTHENTICATED REQUEST')
 	}
 	
 	var tentHeader = 'application/vnd.tent.v0+json'
@@ -79,26 +79,24 @@ module.exports = function(opt, callback, debug) { //method, url, auth, parameter
 }
 
 function makeReq(reqOpt, callback, debug) {
-	if(debug) {
-		console.log('final reqOptions:')
-		console.log(reqOpt)
-	}
+	if(debug) console.log('FINAL REQOPTIONS:', reqOpt)
 
 	var interface = (reqOpt.protocol === 'https:') ? https : http
 
 	var req = interface.request(reqOpt, function(res) {
-		if(debug) console.log('STATUS:', res.statusCode)
-		if(debug) console.log('HEADERS:', JSON.stringify(res.headers))
+		if(debug) console.log('RESSTATUS:', res.statusCode)
+		if(debug) console.log('RESHEADERS:', JSON.stringify(res.headers))
+
 		if(res.statusCode !== 200)
 			return callback(new Error('got bad statusCode: ' + res.statusCode))
 		res.setEncoding('utf8')
 
-		var all = ''
+		var data = ''
 		res.on('data', function (chunk) {
-			all += chunk
+			data += chunk
 		})
 		res.on('end', function() {
-			callback(null, JSON.parse(all))
+			callback(null, JSON.parse(data))
 		})
 	})
 
