@@ -87,8 +87,10 @@ function makeReq(reqOpt, callback, debug) {
 		if(debug) console.log('RESSTATUS:', res.statusCode)
 		if(debug) console.log('RESHEADERS:', JSON.stringify(res.headers))
 
-		if(res.statusCode !== 200)
-			return callback(new Error('got bad statusCode: ' + res.statusCode))
+		//if(res.statusCode < 200 || res.statusCode > 299)
+		//	return callback(new Error('got bad statusCode: ' + res.statusCode))
+		// probably a bad idea
+
 		res.setEncoding('utf8')
 
 		var data = ''
@@ -96,7 +98,10 @@ function makeReq(reqOpt, callback, debug) {
 			data += chunk
 		})
 		res.on('end', function() {
-			callback(null, JSON.parse(data))
+			try {
+				data = JSON.parse(data)
+			} catch(e) {}
+			callback(null, data, res)
 		})
 	})
 
