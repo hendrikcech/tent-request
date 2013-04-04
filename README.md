@@ -1,5 +1,5 @@
 # tent-request
-A node.js module for performing requests against a [Tent](https://tent.io) server.
+A node.js module to perform requests against a [Tent](https://tent.io) server.
 
 ## install
 With npm:
