@@ -1,7 +1,7 @@
 {
   "name": "tent-request",
   "description": "Performes requests against a Tent server",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "main": "request.js",
   "keywords": [
     "tent",
@@ -11,7 +11,7 @@
   ],
   "repository": {
     "type": "git",
-    "url": ""
+    "url": "https://github.com/hendrikcech/tent-request.git"
   },
   "scripts": {
     "test": "vows ./test/*.js --spec"
