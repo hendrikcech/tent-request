@@ -6,15 +6,16 @@ var urlModule = require('url')
 
 "use strict"
 
-module.exports = function(opt, callback, debug) { //method, url, auth, parameters,
+module.exports = function(opt, callback, debug) { //method, url, auth, param
 	var authReq = false
 
 	//validate options
-	if(!opt.method) throw new Error("argument 'method' required")
+	if(!opt.method) opt.method = 'get'
 	if(!opt.url) throw new Error("argument 'url' required")
 	if(opt.auth) { 
-		if(!opt.auth.mac_key || (!opt.auth.mac_key_id && !opt.auth.access_token))
+		if(!opt.auth.mac_key || (!opt.auth.mac_key_id && !opt.auth.access_token)) {
 			throw new Error("for auth, mac_key AND mac_key_id/access_token are required")
+		}
 		if(!opt.auth.mac_key_id) opt.auth.mac_key_id = opt.auth.access_token
 		authReq = true
 		if(debug) console.log('AUTHENTICATED REQUEST')
@@ -39,7 +40,7 @@ module.exports = function(opt, callback, debug) { //method, url, auth, parameter
 		}
 	}
 
-	//breakpoint for no-auth requests
+	//breakpoint for non-auth requests
 	if(!authReq) return makeReq(reqOpt, callback, debug)
 
 
@@ -101,7 +102,7 @@ function makeReq(reqOpt, callback, debug) {
 			try {
 				data = JSON.parse(data)
 			} catch(e) {}
-			callback(null, data, res)
+			callback(null, res, data)
 		})
 	})
 

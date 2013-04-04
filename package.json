@@ -22,8 +22,7 @@
   },
   "license": "MIT",
   "dependencies": {
-    "request": "~2.14.0",
-    "qs": "~0.5.3"
+    "qs": "~0.5.5"
   },
   "devDependencies": {
     "vows": "~0.7.0"

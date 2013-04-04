@@ -4,24 +4,36 @@ var request = require('../request')
 var config = require('./config')
 
 function assertError() {
-	return function(err, res) {
+	return function(err, res, body) {
 		assert.isNull(err)
 	}
 }
 function assertResponse() {
-	return function(err, res) {
-		assert.equal(typeof res, 'object')
+	return function(err, res, body) {
+		assert.equal(typeof body, 'object')
 	}
 }
 function assertResponseContent(keys) {
-	return function(err, res) {
+	return function(err, res, body) {
 		keys.map(function(key) {
-			assert.include(res, key)
+			assert.include(body, key)
 		})
 	}
 }
 
 vows.describe('Request resources').addBatch({
+	'Check config file': {
+		'config file loaded': function() {
+			assert.isObject(config)
+		},
+		'all values set': function() {
+			assert.isNotEmpty(config.server)
+			assert.isNotEmpty(config.auth)
+			assert.isNotEmpty(config.auth.mac_key)
+			assert.isNotEmpty(config.auth.access_token)
+		}
+	}
+}).addBatch({
 	'GET with parameter (/posts)': {
 		topic: function() {
 			var opt = {
@@ -36,7 +48,7 @@ vows.describe('Request resources').addBatch({
 
 		'returns no error': assertError(),
 		'returns object (no string)': assertResponse(),
-		'returns 2 posts': function(err, posts) {
+		'returns 2 posts': function(err, res, posts) {
 			assert.equal(Object.keys(posts).length, 2)
 		}
 	},

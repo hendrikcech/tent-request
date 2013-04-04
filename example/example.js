@@ -47,7 +47,8 @@ var optAuth = {
 	}
 }
 
-request(optAuth, function(err, res) {
+request(optGET, function(err, res, body) {
 	if(err) return console.log(err)
-	console.log(res)
-}, true)
+	if(res.statusCode < 200 || res.statusCode >= 300) return console.log('bad status code ' + res.statusCode)
+	console.log(body)
+})
