@@ -48,6 +48,9 @@ error | error object if an error occured, `null` if not
 response | untouched response object from the core http module ([more information](http://nodejs.org/api/http.html#http_http_incomingmessage))
 body | response body. object if server sent json, the raw body if not
 
+### todo
+- implement getting and posting attachments
+
 ## license
 This software is released under the MIT license:
 
