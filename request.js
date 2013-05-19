@@ -1,115 +1,135 @@
-var http = require('http')
-var https = require('https')
-var qs = require('qs')
-var crypto = require('crypto')
-var urlModule = require('url')
+var hyperquest = require('hyperquest')
+var url = require('url')
+var EventEmitter = require('events').EventEmitter
+var util = require('util')
+var concat = require('concat-stream')
 
-"use strict"
-
-module.exports = function(opt, callback, debug) { //method, url, auth, param
-	var authReq = false
-
-	//validate options
-	if(!opt.method) opt.method = 'get'
-	if(!opt.url) throw new Error("argument 'url' required")
-	if(opt.auth) { 
-		if(!opt.auth.mac_key || (!opt.auth.mac_key_id && !opt.auth.access_token)) {
-			throw new Error("for auth, mac_key AND mac_key_id/access_token are required")
-		}
-		if(!opt.auth.mac_key_id) opt.auth.mac_key_id = opt.auth.access_token
-		authReq = true
-		if(debug) console.log('AUTHENTICATED REQUEST')
-	}
-	
-	var tentHeader = 'application/vnd.tent.v0+json'
-
-	var reqOpt = urlModule.parse(opt.url)
-
-	reqOpt.method = opt.method.toUpperCase()
-	reqOpt.headers = {}
-	reqOpt.headers.Accept = tentHeader
-
-	if(opt.param) {
-		if(reqOpt.method === 'GET') {
-			var queryString = '?' + qs.stringify(opt.param)
-			if(reqOpt.path === '/') reqOpt.path = queryString
-			else reqOpt.path += queryString
-		} else {
-			reqOpt.headers['Content-Type'] = tentHeader
-			reqOpt.body = JSON.stringify(opt.param) //belongs here?
-		}
-	}
-
-	//breakpoint for non-auth requests
-	if(!authReq) return makeReq(reqOpt, callback, debug)
-
-
-	//timestamp
-	var ts = Math.round(Date.now() / 1000)
-
-	//nonce http://www.mediacollege.com/internet/javascript/number/random.html
-	var chars = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXTZabcdefghiklmnopqrstuvwxyz"
-	var nonce = ''
-	for (var i=0; i<6; i++) {
-		var rnum = Math.floor(Math.random() * chars.length)
-		nonce += chars.substring(rnum,rnum+1)
-	}
-
-	if(!reqOpt.port) reqOpt.port = (reqOpt.protocol === 'https:') ? 443 : 80
-
-	var normalizedRequestString = ""
-		+ ts + '\n'
-		+ nonce + '\n'
-		+ reqOpt.method + '\n'
-		+ reqOpt.path + '\n'
-		+ reqOpt.hostname + '\n'
-		+ reqOpt.port + '\n'
-		+ '\n'
-
-	var key = crypto.createHmac('SHA256', opt.auth.mac_key)
-					.update(normalizedRequestString)
-					.digest('base64')
-
-	reqOpt.headers.Authorization = ''
-		+ 'MAC id=\"' + opt.auth.mac_key_id + '\"'
-		+ ', ts=\"' + ts + '\"'
-		+ ', nonce=\"' + nonce + '\"'
-		+ ', mac=\"' + key + '\"'
-
-	makeReq(reqOpt, callback, debug)
+exports.createClient = function(meta, auth) {
+	if(!meta) throw new Error('meta post required')
+	return new Client(meta, auth)
 }
 
-function makeReq(reqOpt, callback, debug) {
-	if(debug) console.log('FINAL REQOPTIONS:', reqOpt)
+var Client = function(meta, auth) {
+	this.meta = meta
+	this.auth = auth
+}
 
-	var interface = (reqOpt.protocol === 'https:') ? https : http
+Client.prototype.newPost = function(type) {
+	//if(!this.auth) 
+	return new Post(this.meta.urls, type)
+}
 
-	var req = interface.request(reqOpt, function(res) {
-		if(debug) console.log('RESSTATUS:', res.statusCode)
-		if(debug) console.log('RESHEADERS:', JSON.stringify(res.headers))
+var Post = function(urls, type) {
+	this.urls = urls
+	this.post = {}
+	if(type) this.post.type = type
+	return this
+}
 
-		//if(res.statusCode < 200 || res.statusCode > 299)
-		//	return callback(new Error('got bad statusCode: ' + res.statusCode))
-		// probably a bad idea
+util.inherits(Post, EventEmitter)
 
-		res.setEncoding('utf8')
+Post.prototype.published_at = function(time) {
+	this.post.published_at = time
+	return this
+}
+Post.prototype.mention = function(arg) {
+	this.post.mentions = this.post.mentions || []
 
-		var data = ''
-		res.on('data', function (chunk) {
-			data += chunk
-		})
-		res.on('end', function() {
-			try {
-				data = JSON.parse(data)
-			} catch(e) {}
-			callback(null, res, data)
-		})
+	if(!Array.isArray(arg)) {
+		arg = [ arg ]
+	}
+
+	var that = this
+	arg.forEach(function(mention) {
+		that.post.mentions.push(mention)
 	})
 
-	req.on('error', function(err) {
-		return callback(err)
+	return this
+}
+Post.prototype.license = function(arg) {
+	this.post.licenses = this.post.licenses || []
+
+	if(!Array.isArray(arg)) {
+		arg = [ arg ]
+	}
+
+	var that = this
+	arg.forEach(function(licenseURL) {
+		that.post.licenses.push({ url: licenseURL })
 	})
 
-	if(reqOpt.body) req.write(reqOpt.body)
-	req.end()
+	return this
+}
+Post.prototype.type = function(type) {
+	this.post.type = type
+	return this
+}
+Post.prototype.content = function(content) {
+	this.post.content = content
+	return this
+}
+Post.prototype.permissions = function(arg) {
+	// arg boolean: set public / not public
+	// arg string/array: public false, set entities and/or groups
+
+	this.post.permissions = this.post.permissions || {}
+
+	if(typeof arg === 'boolean') {
+		this.post.permissions.public = arguments[0]
+		return this
+	}
+
+	this.post.permissions.public = false
+
+	if(typeof arg === 'string') {
+		arg = [ arg ]
+	}
+
+	var that = this
+	arg.forEach(function(id) {
+		var parsed = url.parse(id)
+
+		// entity or group id?
+		if(parsed.protocol === 'https:' || parsed.protocol === 'http:') {
+			that.post.permissions.entities = that.post.permissions.entities || []
+			that.post.permissions.entities.push(id)
+		} else { // group id
+			that.post.permissions.groups = that.post.permissions.groups || []
+			that.post.permissions.groups.push({ post: id })
+		}
+	})
+	return this
+}
+Post.prototype.print = function() {
+	return this.post
+}
+Post.prototype.create = function(callback) {
+	//if(!this.post.type) //emit error
+	var req = hyperquest.post(this.urls.new_post)
+	req.setHeader('Content-Type', 'application/vnd.tent.post.v0+json; type="' + this.post.type + '"')
+	//TODO: Hawk Auth
+	req.end(JSON.stringify(this.post))
+
+	var that = this
+
+	var response
+	req.on('response', function (res) {
+		response = res
+		that.emit('response', res)
+	})
+	
+	req.pipe(concat(function(err, body) {
+		if(err) return that.emit('error', err)
+		try {
+			body = JSON.parse(body)
+		} catch(e) {
+			console.log(e)
+		}
+
+		that.emit('body', body)
+
+		if(callback) callback(err, response, body)
+	}))
+
+	return this
 }

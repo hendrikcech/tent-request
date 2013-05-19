@@ -1,54 +1,50 @@
 var request = require('../request')
 
-var optGET = {
-	method: 'get',
-	url: 'https://hendrik.tent.is/tent/posts',
-	// auth: {
-	// 	mac_key: 'asöldf',
-	// 	mac_key_id: 'kkasfdksf'
-	// },
-	param: {
-		limit: 2
+var metaPart =  {
+	"version": "0.3",
+	"preference": 0,
+	"urls": {
+		"oauth_auth": "http://bb216a47d970.alpha.attic.is/oauth",
+		"oauth_token": "http://bb216a47d970.alpha.attic.is/oauth/authorization",
+		"posts_feed": "http://bb216a47d970.alpha.attic.is/posts",
+		"post": "http://bb216a47d970.alpha.attic.is/posts/{entity}/{post}",
+		"new_post": "http://bb216a47d970.alpha.attic.is/posts",
+		"post_attachment": "http://bb216a47d970.alpha.attic.is/posts/{entity}/{post}/{version}/attachments/{name}",
+		"attachment": "http://bb216a47d970.alpha.attic.is/attachments/{entity}/{digest}",
+		"batch": "http://bb216a47d970.alpha.attic.is/batch",
+		"server_info": "http://bb216a47d970.alpha.attic.is/server"
 	}
 }
-
-var optPOST = {
-	method: 'post',
-	url: 'https://hendrik.tent.is/tent/apps',
-	param: {
-		"name": "FooApp",
-		"description": "Does amazing foos with your data",
-		"url": "http://example.com",
-		"icon": "http://example.com/icon.png",
-		"redirect_uris": [
-		  "https://app.example.com/tent/callback"
-		],
-		"scopes": {
-		  "write_profile": "Uses an app profile section to describe foos",
-		  "read_followings": "Calculates foos based on your followings"
-		}
-	}
+var auth = {
+	"access_token": "qUtGgNr7YTURDensMvGa1g",
+	"hawk_key": "Oty-0oimG5qFVr6fnVL1mg",
+	"hawk_algorithm": "sha256",
+	"token_type": "https://tent.io/oauth/hawk-token"
 }
 
-var optAuth = {
-	method: 'put',
-	url: 'https://hendrik.tent.is/tent/profile/https%3A%2F%2Ftent.io%2Ftypes%2Finfo%2Fbasic%2Fv0.1.0',
-	auth: {
-		mac_key: '',
-		access_token: '',
-	},
-	param: {
-		"avatar_url" : "http://www.gravatar.com/avatar/5a21fcfa05ac7d496a399e44c6cc60a8.png?size=200",
-		"bio" : "",
-		"birthdate" : "01.07.1995",
-		"gender" : "",
-		"location" : "Braunschweig, Germany",
-		"name" : "Hendrik Cech"
-	}
-}
+var client = request.createClient(metaPart, auth)
+var post = client.newPost('https://tent.io/types/app/v0#')
+	.content({
+		"name": "Example App",
+		"url": "https://app.example.com",
+		"post_types": {
+		  "read": [
+		    "https://tent.io/types/app/v0"
+		  ],
+		  "write": [
+		    "https://tent.io/types/status/v0",
+		    "https://tent.io/types/photo/v0"
+		  ]
+		},
+		"redirect_uri": "https://app.example.com/oauth"
+	})
+	.permissions(false)
+	.create(function(err, res, body) {
+		//if(err) console.error(err)
+		//console.log(res.statusCode)
+		//console.log(body)
+	})
 
-request(optGET, function(err, res, body) {
-	if(err) return console.log(err)
-	if(res.statusCode < 200 || res.statusCode >= 300) return console.log('bad status code ' + res.statusCode)
-	console.log(body)
-})
+post.on('error', function(err) {console.error(err)})
+post.on('response', function(res) {console.log(res.statusCode)})
+post.on('body', function(body) {console.log(body)})

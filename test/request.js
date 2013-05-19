@@ -1,27 +1,92 @@
 var vows = require('vows')
 var assert = require('assert')
 var request = require('../request')
-var config = require('./config')
+//var config = require('./config')
 
-function assertError() {
-	return function(err, res, body) {
-		assert.isNull(err)
+function testSetter(arg, expected) {
+	var context = {
+		topic: function(client) {
+			var split = this.context.name.split(/ +/) // ['published_at', 'comment']
+			var command = split[0] // '.published_at'
+			command = command.substr(1)	// '.substr(1)'
+
+			var post = client.newPost('http://post.type')
+			post[command](arg)
+			return post.print()
+		}
 	}
-}
-function assertResponse() {
-	return function(err, res, body) {
-		assert.equal(typeof body, 'object')
+	context['valid'] = function(post) {
+		expected.type = expected.type || 'http://post.type'
+		assert.deepEqual(post, expected)
 	}
-}
-function assertResponseContent(keys) {
-	return function(err, res, body) {
-		keys.map(function(key) {
-			assert.include(body, key)
-		})
-	}
+
+	return context
 }
 
-vows.describe('Request resources').addBatch({
+vows.describe('newPost').addBatch({
+	'.newClient': {
+		topic: function() {
+			var metaPart =  {
+				"version": "0.3",
+				"preference": 0,
+				"urls": {
+					"oauth_auth": "http://bb216a47d970.alpha.attic.is/oauth",
+					"oauth_token": "http://bb216a47d970.alpha.attic.is/oauth/authorization",
+					"posts_feed": "http://bb216a47d970.alpha.attic.is/posts",
+					"post": "http://bb216a47d970.alpha.attic.is/posts/{entity}/{post}",
+					"new_post": "http://bb216a47d970.alpha.attic.is/posts",
+					"post_attachment": "http://bb216a47d970.alpha.attic.is/posts/{entity}/{post}/{version}/attachments/{name}",
+					"attachment": "http://bb216a47d970.alpha.attic.is/attachments/{entity}/{digest}",
+					"batch": "http://bb216a47d970.alpha.attic.is/batch",
+					"server_info": "http://bb216a47d970.alpha.attic.is/server"
+				}
+			}
+			var client = request.createClient(metaPart)
+			return client
+		},
+		'newPost': {
+			'.published_at': testSetter('123456789', { published_at: '123456789' }),
+			'.mention single': testSetter('http://ment.ion', { mentions: ['http://ment.ion'] }),
+			'.mention multiple': testSetter(['http://ment1.ion', 'ment2.ion'], { mentions: ['http://ment1.ion', 'ment2.ion'] }),
+			'.license single': testSetter('http://licen.se', { licenses: [{ url: 'http://licen.se' }]}),
+			'.license multiple': testSetter(['http://licen1.se', 'http://licen2.se'], { licenses: [{ url: 'http://licen1.se' }, { url: 'http://licen2.se'}]}),
+			'.type': testSetter('https://ty.pe', { type: 'https://ty.pe' }),
+			'.content': testSetter({ name: 'hi', 'who': { are: 'you?' }}, { content: { name: 'hi', 'who': { are: 'you?' }}}),
+			'.permissions boolean': testSetter(false, { type: 'http://post.type', permissions: { public: false } }),
+			'.permissions single entity': testSetter('https://enti.ty', { permissions: { public: false, entities: ['https://enti.ty'] }}),
+			'.permissions single group': testSetter('groupID', { permissions: { public: false, groups: [{ post: 'groupID' }] }}),
+			'.permissions multiple mixed': testSetter(['https://enti.ty', 'groupID', 'http://enti.ty'], {permissions: { public: false, entities: [ 'https://enti.ty', 'http://enti.ty' ], groups: [{ post: 'groupID' }] }})
+		}
+	}
+}).export(module)
+
+		// 'most': {
+		// 	topic: function(client) {
+		// 		var post = client.newPost('http://post.type')
+		// 			.published_at('123456789')
+		// 			.mention('mention1')
+		// 			.mention(['mention2', 'mention3'])
+		// 			.license('license1')
+		// 			.license('license2', 'license3')
+		// 			.type('https://post.type')
+		// 			.content({ jo: 'content!', bla: { ya: 'know?' } })
+
+		// 		return post.print()
+		// 	},
+		// 	valid: function(post) {
+		// 		var expected = {
+		// 			type: 'https://post.type',
+  // 					published_at: '123456789',
+  // 					mentions: [ 'mention1', 'mention2', 'mention3' ],
+  // 					licenses: [ { url: 'license1' }, { url: 'license2' } ],
+  // 					content: { jo: 'content!', bla: { ya: 'know?' } } 
+  // 				}
+		// 		assert.deepEqual(post, expected)
+		// 	}
+		// },
+
+/*
+.addBatch({
 	'Check config file': {
 		'config file loaded': function() {
 			assert.isObject(config)
@@ -33,75 +98,5 @@ vows.describe('Request resources').addBatch({
 			assert.isNotEmpty(config.auth.access_token)
 		}
 	}
-}).addBatch({
-	'GET with parameter (/posts)': {
-		topic: function() {
-			var opt = {
-				method: 'get',
-				url: config.server + '/posts',
-				param: {
-					limit: 2
-				}
-			}
-			request(opt, this.callback)
-		},
-
-		'returns no error': assertError(),
-		'returns object (no string)': assertResponse(),
-		'returns 2 posts': function(err, res, posts) {
-			assert.equal(Object.keys(posts).length, 2)
-		}
-	},
-	'POST with parameters (/apps)': {
-		topic: function() {
-			var opt = {
-				method: 'post',
-				url: config.server + '/apps',
-				param: {
-					"name": "FooApp",
-					"description": "Does amazing foos with your data",
-					"url": "http://example.com",
-					"icon": "http://example.com/icon.png",
-					"redirect_uris": [
-					  "https://app.example.com/tent/callback"
-					],
-					"scopes": {
-					  "write_profile": "Uses an app profile section to describe foos",
-					  "read_followings": "Calculates foos based on your followings"
-					}
-				}
-			}
-			request(opt, this.callback)
-		},
-
-		'returns no error': assertError(),
-		'returns object (no string)': assertResponse(),
-		'response content seems to be valid': assertResponseContent(
-			['name', 'scopes', 'icon']
-		)
-	},
-	'PUT with parameters and authentication (/profile)': {
-		topic: function() {
-			var opt = {
-				method: 'put',
-				url: config.server + '/profile/https%3A%2F%2Ftent.io%2Ftypes%2Finfo%2Fbasic%2Fv0.1.0',
-				auth: config.auth,
-				param: {
-					"avatar_url" : "http://www.gravatar.com/avatar/5a21fcfa05ac7d496a399e44c6cc60a8.png?size=200",
-					"bio" : "",
-					"birthdate" : "01.07.1995",
-					"gender" : "",
-					"location" : "Braunschweig, Germany",
-					"name" : "Hendrik Cech"
-				}
-			}
-			request(opt, this.callback)
-		},
-
-		'returns no error': assertError(),
-		'returns object (no string)': assertResponse(),
-		'response content seems to be valid': assertResponseContent(
-			['https://tent.io/types/info/basic/v0.1.0']
-		)
-	}
-}).export(module)
+})
+*/
