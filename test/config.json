@@ -1,7 +1,23 @@
 {
-	"server": "",
+	"meta": {
+		"version": "0.3",
+		"preference": 0,
+		"urls": {
+			"oauth_auth": "",
+			"oauth_token": "",
+			"posts_feed": "",
+			"post": "",
+			"new_post": "",
+			"post_attachment": "",
+			"attachment": "",
+			"batch": "",
+			"server_info": ""
+		}
+	},
 	"auth": {
-		"mac_key": "",
-		"access_token": ""
+		"access_token": "",
+		"hawk_key": "",
+		"hawk_algorithm": "",
+		"token_type": ""
 	}
 }

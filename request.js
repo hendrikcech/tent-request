@@ -3,6 +3,7 @@ var url = require('url')
 var EventEmitter = require('events').EventEmitter
 var util = require('util')
 var concat = require('concat-stream')
+var hawk = require('hawk')
 
 exports.createClient = function(meta, auth) {
 	if(!meta) throw new Error('meta post required')
@@ -19,7 +20,11 @@ Client.prototype.newPost = function(type) {
 	return new Post(this.meta.urls, type)
 }
 
-var Post = function(urls, type) {
+Client.prototype.queryPost = function() {
+	return new Query(this.meta.urls)
+}
+
+function Post(urls, type) {
 	this.urls = urls
 	this.post = {}
 	if(type) this.post.type = type
@@ -35,9 +40,7 @@ Post.prototype.published_at = function(time) {
 Post.prototype.mention = function(arg) {
 	this.post.mentions = this.post.mentions || []
 
-	if(!Array.isArray(arg)) {
-		arg = [ arg ]
-	}
+	if(!Array.isArray(arg)) arg = [arg]
 
 	var that = this
 	arg.forEach(function(mention) {
@@ -49,9 +52,7 @@ Post.prototype.mention = function(arg) {
 Post.prototype.license = function(arg) {
 	this.post.licenses = this.post.licenses || []
 
-	if(!Array.isArray(arg)) {
-		arg = [ arg ]
-	}
+	if(!Array.isArray(arg)) arg = [arg]
 
 	var that = this
 	arg.forEach(function(licenseURL) {
@@ -81,9 +82,7 @@ Post.prototype.permissions = function(arg) {
 
 	this.post.permissions.public = false
 
-	if(typeof arg === 'string') {
-		arg = [ arg ]
-	}
+	if(typeof arg === 'string') arg = [arg]
 
 	var that = this
 	arg.forEach(function(id) {
@@ -107,7 +106,9 @@ Post.prototype.create = function(callback) {
 	//if(!this.post.type) //emit error
 	var req = hyperquest.post(this.urls.new_post)
 	req.setHeader('Content-Type', 'application/vnd.tent.post.v0+json; type="' + this.post.type + '"')
+	
 	//TODO: Hawk Auth
+	
 	req.end(JSON.stringify(this.post))
 
 	var that = this
@@ -132,4 +133,54 @@ Post.prototype.create = function(callback) {
 	}))
 
 	return this
+}
+
+function Query(urls) {
+	this.urls = urls
+	this.query = {}
+}
+Query.prototype.sort_by = function(sorting) {
+	this.query.sort_by = sorting
+	return this
+}
+Query.prototype.since = function(since) {
+	this.query.since = since
+	return this
+}
+Query.prototype.until = function(until) {
+	this.query.until = until
+	return this
+}
+Query.prototype.before = function(before) {
+	this.query.before = before
+	return this
+}
+Query.prototype.types = function(arg) {
+	if(typeof arg === 'string') arg = [arg]
+
+	this.query.types = commaSeperate(arg)
+	return this
+}
+
+function commaSeperate(items) { //array
+	var res = ''
+	items.forEach(function(item, index) {
+		if(index === 0) res = item //is it the first item?
+		else res += ',' + item
+	})
+	return res
+}
+
+Query.prototype.entities = function(arg) {
+	if(typeof arg === 'string') arg = [arg]
+
+	this.query.entities = commaSeperate(arg)
+	return this
+}
+Query.prototype.mentions = function(arg) {
+	console.log('TODO')
+	return this
+}
+Query.prototype.print = function() {
+	return this.query
 }

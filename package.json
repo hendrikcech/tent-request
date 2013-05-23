@@ -24,7 +24,8 @@
   "dependencies": {
     "qs": "~0.5.5",
     "hyperquest": "~0.1.5",
-    "concat-stream": "~0.1.1"
+    "concat-stream": "~0.1.1",
+    "hawk": "~0.15.0"
   },
   "devDependencies": {
     "vows": "~0.7.0"
