@@ -1,7 +1,8 @@
 var vows = require('vows')
 var assert = require('assert')
 var request = require('../request')
-var meta = require('./meta.json')
+var meta = require('./config.json').meta
+var auth = require('./config.json').auth
 
 function testSetter(arg, expected) {
 	var context = {
@@ -23,6 +24,23 @@ function testSetter(arg, expected) {
 	return context
 }
 
+function assertResponse(topicFn) {
+	return  {
+		topic: topicFn,
+		'no error': function(err, res, body) {
+			assert.isNull(err)
+			assert.isUndefined(body.error)
+			assert.equal(res.statusCode, 200)
+		},
+		'valid response object': function(err, res, body) {
+			assert.include(res, 'statusCode')
+		},
+		'valid body': function(err, res, body) {
+			assert.include(body, 'content')
+		}
+	}
+}
+
 vows.describe('newPost()').addBatch({
 	'': {
 		topic: function() {
@@ -30,8 +48,7 @@ vows.describe('newPost()').addBatch({
 			return client
 		},
 		'create()': {
-			//TODO test event emitter
-			topic: function(client) {
+			'without auth': assertResponse(function(client) {
 				var app = {
 					"name": "MAAAA Example App",
 					"url": "https://app.blablabla.com",
@@ -41,16 +58,13 @@ vows.describe('newPost()').addBatch({
 					.content(app)
 					.permissions(false)
 					.create(this.callback)
-			},
-			'no error': function(err, res, body) {
-				assert.isNull(err)
-			},
-			'valid response object': function(err, res, body) {
-				assert.include(res, 'statusCode')
-			},
-			'valid body': function(err, res, body) {
-				assert.include(body, 'content')
-			}
+			}),
+			'with auth': assertResponse(function() {
+				var client = request.createClient(meta, auth)
+				var post = client.newPost('https://tent.io/types/status/v0#')
+					.content({ text: 'request test post' })
+					.create(this.callback)
+			})
 		},
 		'setters': {
 			'published_at()': testSetter(123456789, { published_at: 123456789 }),

@@ -27,7 +27,7 @@ Client.prototype.newPost = function(type) {
 	return new Post(type, this.meta.urls, this.auth)
 }
 
-Client.prototype.queryPost = function() {
+Client.prototype.getPosts = function() {
 	return new Query(this.meta.urls, this.auth)
 }
 

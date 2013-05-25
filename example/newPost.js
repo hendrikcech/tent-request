@@ -2,7 +2,7 @@ var request = require('../request')
 var meta = require('../test/config.json').meta
 var auth = require('../test/config.json').auth
 
-var client = request.createClient(metaPart, auth)
+var client = request.createClient(meta, auth)
 var post = client.newPost('https://tent.io/types/status/v0#')
 	.content({
 		"text": "testTESTtestTEST"
