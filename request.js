@@ -4,6 +4,7 @@ var EventEmitter = require('events').EventEmitter
 var util = require('util')
 var concat = require('concat-stream')
 var hawk = require('hawk')
+var qs = require('querystring')
 
 exports.createClient = function(meta, auth) {
 	if(!meta) throw new Error('meta post required')
@@ -11,21 +12,28 @@ exports.createClient = function(meta, auth) {
 }
 
 var Client = function(meta, auth) {
+	if(!meta) throw new Error('meta post required')
 	this.meta = meta
-	this.auth = auth
+	if(!auth) this.auth = false
+	else this.auth = {
+		id: auth.id || auth.access_token,
+		key: auth.key || auth.hawk_key,
+		algorithm: auth.algorithm || auth.hawk_algorithm
+	}
 }
 
 Client.prototype.newPost = function(type) {
 	//if(!this.auth) 
-	return new Post(this.meta.urls, type)
+	return new Post(type, this.meta.urls, this.auth)
 }
 
 Client.prototype.queryPost = function() {
-	return new Query(this.meta.urls)
+	return new Query(this.meta.urls, this.auth)
 }
 
-function Post(urls, type) {
+function Post(type, urls, auth) {
 	this.urls = urls
+	this.auth = auth
 	this.post = {}
 	if(type) this.post.type = type
 	return this
@@ -103,12 +111,21 @@ Post.prototype.print = function() {
 	return this.post
 }
 Post.prototype.create = function(callback) {
-	//if(!this.post.type) //emit error
+	if(!this.post.type) {
+		var message = 'no post type defined'
+		this.emit('error', message)
+		if(callback) callback(message)
+		return
+	}
+
 	var req = hyperquest.post(this.urls.new_post)
 	req.setHeader('Content-Type', 'application/vnd.tent.post.v0+json; type="' + this.post.type + '"')
-	
-	//TODO: Hawk Auth
-	
+
+	if(this.auth) {
+		var auth = hawk.client.header(this.urls.new_post, 'POST', { credentials: this.auth })
+		req.request.headers.Authorization = auth.field //no clue why .setHeader() doesnt work
+	}
+
 	req.end(JSON.stringify(this.post))
 
 	var that = this
@@ -135,9 +152,17 @@ Post.prototype.create = function(callback) {
 	return this
 }
 
-function Query(urls) {
+function Query(urls, auth) {
 	this.urls = urls
+	this.auth = auth
 	this.query = {}
+}
+
+util.inherits(Query, EventEmitter)
+
+Query.prototype.limit = function(limit) {
+	this.query.limit = limit
+	return this
 }
 Query.prototype.sort_by = function(sorting) {
 	this.query.sort_by = sorting
@@ -183,4 +208,37 @@ Query.prototype.mentions = function(arg) {
 }
 Query.prototype.print = function() {
 	return this.query
+}
+Query.prototype.send = function(callback) {
+	var url = this.urls.posts_feed
+	var param = qs.stringify(this.query)
+	if(param) url += '?' + param
+
+	var req = hyperquest.get(url)
+	req.setHeader('Accept', 'application/vnd.tent.posts-feed.v0+json')
+
+	if(this.auth) {
+		var auth = hawk.client.header(url, 'GET', { credentials: this.auth })
+		req.request.headers.Authorization = auth.field //no clue why .setHeader() doesnt work
+	}
+
+	var that = this
+	var response
+	req.on('response', function (res) {
+		response = res
+		that.emit('response', res)
+	})
+	
+	req.pipe(concat(function(err, body) {
+		if(err) return that.emit('error', err)
+		try {
+			body = JSON.parse(body)
+		} catch(e) {
+			console.log(e)
+		}
+
+		that.emit('body', body)
+
+		if(callback) callback(err, response, body)
+	}))
 }
