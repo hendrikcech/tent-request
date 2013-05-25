@@ -1,7 +1,7 @@
 var vows = require('vows')
 var assert = require('assert')
 var request = require('../request')
-var meta = require('./meta.json')
+var meta = require('./config.json').meta
 
 function testSetter(arg, expected) {
 	var context = {
@@ -10,7 +10,7 @@ function testSetter(arg, expected) {
 			var command = split[0] // 'published_at()'
 			command = command.slice(0, -2)	// 'published_at'
 
-			var query = client.queryPost()
+			var query = client.getPosts()
 			query[command](arg)
 			return query.print()
 		}
@@ -22,27 +22,47 @@ function testSetter(arg, expected) {
 	return context
 }
 
-vows.describe('queryPost()').addBatch({
+function assertResponse(topicFn) {
+	var context = {
+		topic: topicFn,
+		'no error': function(err, res, body) {
+			assert.isNull(err)
+			assert.isUndefined(body.error)
+			assert.equal(res.statusCode, 200)
+		},
+		'valid response object': function(err, res, body) {
+			assert.include(res, 'statusCode')
+		},
+		'valid body': function(err, res, body) {
+			assert.include(body, 'pages')
+			assert.include(body, 'data')
+		}
+	}
+	if(arguments.length === 1) return context
+
+	for(var i = 1; i<arguments.length; i++) {
+		context[arguments[i][0]] = arguments[i][1]
+	}
+	return context
+}
+
+vows.describe('getPosts()').addBatch({
 	'': {
 		topic: function() {
 			var client = request.createClient(meta)
 			return client
 		},
 		'send()': {
-			topic: function(client) {
-				var query = client.queryPost()
-					.send(this.callback)
-			},
-			'no error': function(err, res, body) {
-				assert.isNull(err)
-			},
-			'valid response object': function(err, res, body) {
-				assert.include(res, 'statusCode')
-			},
-			'valid body': function(err, res, body) {
-				console.log(body)
-				//assert.include(body, 'content')
-			}
+			'vanilla': assertResponse(function(client) {
+				client.getPosts().send(this.callback)
+			}),
+			'with limit': assertResponse(
+				function(client) {
+					client.getPosts().limit(2).send(this.callback)
+				}, ['exactly two responses', function(err, res, body) {
+					assert.equal(body.data.length, 2)
+				}]
+			)
 		},
 		'setters': {
 			'limit()': testSetter(25, { limit: 25 }),
