@@ -133,7 +133,8 @@ newPost.prototype._send = function() {
 	}
 
 	var req = hyperquest.post(this.urls.new_post)
-	req.setHeader('Content-Type', 'application/vnd.tent.post.v0+json; type="' + this.post.type + '"')
+	req.setHeader('Content-Type',
+		'application/vnd.tent.post.v0+json; type="' + this.post.type + '"')
 
 	finishReq(req, this)
 
@@ -217,7 +218,7 @@ getPosts.prototype.entities = function(arg) {
 }
 getPosts.prototype.mentions = function(arg) {
 	if(this._sent) throw new Error('request already sent')
-	console.log('TODO')
+	//TODO
 	return this.stream
 }
 getPosts.prototype.print = function() {
@@ -234,21 +235,58 @@ function getPost(urls, auth, entity, id, callback) {
 	this.id = id
 	this.callback = callback || false
 
-	this.stream = through()
+	this.acceptHeader = 'application/vnd.tent.post.v0+json'
+	this.method = 'GET'
+	this.version = false
 
+	this.stream = through()
 	setupStream(this.stream, this)
 
 	return this.stream
 }
 
+getPost.prototype.mentions = function() {
+	if(this._sent) throw new Error('request already sent')
+	this.acceptHeader = 'application/vnd.tent.post-mentions.v0+json'
+	return this.stream
+}
+getPost.prototype.versions = function() {
+	if(this._sent) throw new Error('request already sent')
+	this.acceptHeader = 'application/vnd.tent.post-versions.v0+json'
+	return this.stream
+}
+getPost.prototype.childVersions = function(version) {
+	if(this._sent) throw new Error('request already sent')
+	this.acceptHeader = 'application/vnd.tent.post-children.v0+json'
+	if(version) this.version = version
+	return this.stream
+}
+getPost.prototype.count = function() {
+	if(this._sent) throw new Error('request already sent')
+	this.method = 'HEAD'
+	return this.stream
+}
+
+getPost.prototype.print = function() {
+	return [
+		this.acceptHeader,
+		this.method,
+		this.version
+	]
+}
+
 getPost.prototype._send = function() {
 	var tpl = urlParser.parse(this.urls.post)
 	var url = tpl.expand({ entity: this.entity, post: this.id })
+	if(this.version) url += '?=' + this.version
 
-	var req = hyperquest.get(url)
-	req.setHeader('Accept', 'application/vnd.tent.post.v0+json')
+	var req = hyperquest(url, { method: this.method })
+	req.setHeader('Accept', this.acceptHeader)
 
 	finishReq(req, this) //bad style blabla
+
+	if(this.method === 'HEAD')
+		req.end() //bug in hyperquest: returns duplex stream
 
 	return req
 }
@@ -306,7 +344,10 @@ function finishReq(req, that) {
 	var cb = that.callback
 	req.pipe(concat(function(err, body) {
 		if(err) return cb(err)
-		try {
+
+		if(req.request.method === 'HEAD')
+			body = Number(response.headers.count)
+		else try {
 			body = JSON.parse(body)
 		} catch(e) {}
 
