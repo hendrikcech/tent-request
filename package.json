@@ -22,10 +22,11 @@
   },
   "license": "MIT",
   "dependencies": {
-    "qs": "~0.5.5",
     "hyperquest": "~0.1.5",
     "concat-stream": "~0.1.1",
-    "hawk": "~0.15.0"
+    "hawk": "~0.15.0",
+    "uri-template": "~0.3.3",
+    "through": "~2.3.4"
   },
   "devDependencies": {
     "vows": "~0.7.0"

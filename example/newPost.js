@@ -3,12 +3,15 @@ var meta = require('../test/config.json').meta
 var auth = require('../test/config.json').auth
 
 var client = request.createClient(meta, auth)
-var post = client.newPost('https://tent.io/types/status/v0#')
+var post = client.newPost('https://tent.io/types/status/v0#', cb)
 	.content({
 		"text": "testTESTtestTEST"
 	})
-	.create(function(err, res, body) {
-		if(err) console.error(err)
-		console.log(res.statusCode)
-		console.log(body)
-	})
+
+//post.pipe(process.stdout)
+
+function cb(err, res, body) {
+	if(err) console.error(err)
+	console.log(res.statusCode)
+	console.log(body)
+}
