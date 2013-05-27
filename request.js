@@ -1,10 +1,10 @@
 var hyperquest = require('hyperquest')
 var url = require('url')
-var EventEmitter = require('events').EventEmitter
-var util = require('util')
 var concat = require('concat-stream')
 var hawk = require('hawk')
 var qs = require('querystring')
+var urlParser = require('uri-template')
+var through = require('through')
 
 exports.createClient = function(meta, auth) {
 	if(!meta) throw new Error('meta post required')
@@ -21,31 +21,42 @@ var Client = function(meta, auth) {
 		algorithm: auth.algorithm || auth.hawk_algorithm
 	}
 }
-
-Client.prototype.newPost = function(type) {
+Client.prototype.newPost = function(type, callback) {
 	//if(!this.auth) 
-	return new Post(type, this.meta.urls, this.auth)
+	return new newPost(this.meta.urls, this.auth, type, callback)
+}
+Client.prototype.getPosts = function(callback) {
+	return new getPosts(this.meta.urls, this.auth, callback)
+}
+Client.prototype.getPost = function(entity, id, callback) {
+	return new getPost(this.meta.urls, this.auth, entity, id, callback)
 }
 
-Client.prototype.getPosts = function() {
-	return new Query(this.meta.urls, this.auth)
-}
-
-function Post(type, urls, auth) {
+function newPost(urls, auth, type, callback) {
 	this.urls = urls
 	this.auth = auth
+
 	this.post = {}
-	if(type) this.post.type = type
-	return this
+
+	if(typeof type === 'function') this.callback = type
+	else if(type) {
+		this.post.type = type
+		this.callback = callback || false
+	}
+
+	this.stream = through()
+	setupStream(this.stream, this)
+	
+	return this.stream
 }
 
-util.inherits(Post, EventEmitter)
-
-Post.prototype.published_at = function(time) {
+newPost.prototype.published_at = function(time) {
+	if(this._sent) throw new Error('request already sent')
 	this.post.published_at = time
-	return this
+	return this.stream
 }
-Post.prototype.mention = function(arg) {
+newPost.prototype.mention = function(arg) {
+	if(this._sent) throw new Error('request already sent')
 	this.post.mentions = this.post.mentions || []
 
 	if(!Array.isArray(arg)) arg = [arg]
@@ -55,9 +66,10 @@ Post.prototype.mention = function(arg) {
 		that.post.mentions.push(mention)
 	})
 
-	return this
+	return this.stream
 }
-Post.prototype.license = function(arg) {
+newPost.prototype.license = function(arg) {
+	if(this._sent) throw new Error('request already sent')
 	this.post.licenses = this.post.licenses || []
 
 	if(!Array.isArray(arg)) arg = [arg]
@@ -67,17 +79,20 @@ Post.prototype.license = function(arg) {
 		that.post.licenses.push({ url: licenseURL })
 	})
 
-	return this
+	return this.stream
 }
-Post.prototype.type = function(type) {
+newPost.prototype.type = function(type) {
+	if(this._sent) throw new Error('request already sent')
 	this.post.type = type
-	return this
+	return this.stream
 }
-Post.prototype.content = function(content) {
+newPost.prototype.content = function(content) {
+	if(this._sent) throw new Error('request already sent')
 	this.post.content = content
-	return this
+	return this.stream
 }
-Post.prototype.permissions = function(arg) {
+newPost.prototype.permissions = function(arg) {
+	if(this._sent) throw new Error('request already sent')
 	// arg boolean: set public / not public
 	// arg string/array: public false, set entities and/or groups
 
@@ -85,7 +100,7 @@ Post.prototype.permissions = function(arg) {
 
 	if(typeof arg === 'boolean') {
 		this.post.permissions.public = arguments[0]
-		return this
+		return this.stream
 	}
 
 	this.post.permissions.public = false
@@ -105,86 +120,83 @@ Post.prototype.permissions = function(arg) {
 			that.post.permissions.groups.push({ post: id })
 		}
 	})
-	return this
+	return this.stream
 }
-Post.prototype.print = function() {
+newPost.prototype.print = function() {
 	return this.post
 }
-Post.prototype.create = function(callback) {
+newPost.prototype._send = function() {
 	if(!this.post.type) {
 		var message = 'no post type defined'
-		this.emit('error', message)
-		if(callback) callback(message)
-		return
+		if(this.callback) return this.callback(message)
+		else throw new Error(message)
 	}
 
 	var req = hyperquest.post(this.urls.new_post)
 	req.setHeader('Content-Type', 'application/vnd.tent.post.v0+json; type="' + this.post.type + '"')
 
-	if(this.auth) {
-		var auth = hawk.client.header(this.urls.new_post, 'POST', { credentials: this.auth })
-		req.request.headers.Authorization = auth.field //no clue why .setHeader() doesnt work
-	}
+	finishReq(req, this)
 
 	req.end(JSON.stringify(this.post))
 
-	var that = this
-
-	var response
-	req.on('response', function (res) {
-		response = res
-		that.emit('response', res)
-	})
-	
-	req.pipe(concat(function(err, body) {
-		if(err) return that.emit('error', err)
-		try {
-			body = JSON.parse(body)
-		} catch(e) {
-			console.log(e)
-		}
-
-		that.emit('body', body)
-
-		if(callback) callback(err, response, body)
-	}))
-
-	return this
+	return req
 }
 
-function Query(urls, auth) {
+function getPosts(urls, auth, callback) {
 	this.urls = urls
 	this.auth = auth
+	this.callback = callback || false
 	this.query = {}
+
+	this.stream = through()
+	setupStream(this.stream, this)
+
+	return this.stream
 }
 
-util.inherits(Query, EventEmitter)
+getPosts.prototype._send = function() {
+	var url = this.urls.posts_feed
+	var param = qs.stringify(this.query)
+	if(param) url += '?' + param
 
-Query.prototype.limit = function(limit) {
+	var req = hyperquest.get(url)
+	req.setHeader('Accept', 'application/vnd.tent.posts-feed.v0+json')
+
+	finishReq(req, this)
+
+	return req
+}
+
+getPosts.prototype.limit = function(limit) {
+	if(this._sent) throw new Error('request already sent')
 	this.query.limit = limit
-	return this
+	return this.stream
 }
-Query.prototype.sort_by = function(sorting) {
+getPosts.prototype.sort_by = function(sorting) {
+	if(this._sent) throw new Error('request already sent')
 	this.query.sort_by = sorting
-	return this
+	return this.stream
 }
-Query.prototype.since = function(since) {
+getPosts.prototype.since = function(since) {
+	if(this._sent) throw new Error('request already sent')
 	this.query.since = since
-	return this
+	return this.stream
 }
-Query.prototype.until = function(until) {
+getPosts.prototype.until = function(until) {
+	if(this._sent) throw new Error('request already sent')
 	this.query.until = until
-	return this
+	return this.stream
 }
-Query.prototype.before = function(before) {
+getPosts.prototype.before = function(before) {
+	if(this._sent) throw new Error('request already sent')
 	this.query.before = before
-	return this
+	return this.stream
 }
-Query.prototype.types = function(arg) {
+getPosts.prototype.types = function(arg) {
+	if(this._sent) throw new Error('request already sent')
 	if(typeof arg === 'string') arg = [arg]
-
 	this.query.types = commaSeperate(arg)
-	return this
+	return this.stream
 }
 
 function commaSeperate(items) { //array
@@ -196,49 +208,108 @@ function commaSeperate(items) { //array
 	return res
 }
 
-Query.prototype.entities = function(arg) {
+getPosts.prototype.entities = function(arg) {
+	if(this._sent) throw new Error('request already sent')
 	if(typeof arg === 'string') arg = [arg]
 
 	this.query.entities = commaSeperate(arg)
-	return this
+	return this.stream
 }
-Query.prototype.mentions = function(arg) {
+getPosts.prototype.mentions = function(arg) {
+	if(this._sent) throw new Error('request already sent')
 	console.log('TODO')
-	return this
+	return this.stream
 }
-Query.prototype.print = function() {
+getPosts.prototype.print = function() {
 	return this.query
 }
-Query.prototype.send = function(callback) {
-	var url = this.urls.posts_feed
-	var param = qs.stringify(this.query)
-	if(param) url += '?' + param
+
+
+function getPost(urls, auth, entity, id, callback) {
+	if(!entity) throw new Error('entity required')
+	if(!id) throw new Error('post id required')
+	this.urls = urls
+	this.auth = auth
+	this.entity = entity
+	this.id = id
+	this.callback = callback || false
+
+	this.stream = through()
+
+	setupStream(this.stream, this)
+
+	return this.stream
+}
+
+getPost.prototype._send = function() {
+	var tpl = urlParser.parse(this.urls.post)
+	var url = tpl.expand({ entity: this.entity, post: this.id })
 
 	var req = hyperquest.get(url)
-	req.setHeader('Accept', 'application/vnd.tent.posts-feed.v0+json')
+	req.setHeader('Accept', 'application/vnd.tent.post.v0+json')
 
-	if(this.auth) {
-		var auth = hawk.client.header(url, 'GET', { credentials: this.auth })
+	finishReq(req, this) //bad style blabla
+
+	return req
+}
+
+// https://github.com/substack/hyperquest/blob/master/index.js <3
+function bind(obj, fn) {
+  var args = Array.prototype.slice.call(arguments, 2)
+  return function () {
+    args = args.concat(Array.prototype.slice.call(arguments))
+    return fn.apply(obj, args)
+  }
+}
+function setupStream(stream, that) {
+	stream.writable = false
+
+	for(var key in that.__proto__) {
+		if(!(/^_/.test(key))) //function name begins with _ (e.g. _send)
+			stream[key] = bind(that, that[key])
+	}
+
+	var closed = false
+	stream.on('close', function() { closed = true })
+
+	process.nextTick(function() {
+		if(closed) return
+		stream.on('close', function() {  req.destroy() })
+
+		var req = that._send()
+		req.on('error', bind(stream, stream.emit, 'error'))
+
+		req.on('response', function(res) {
+			stream.emit('response', res)
+
+			res.on('data', function(buf) { stream.queue(buf) })
+			res.on('end', function() { stream.queue(null) })
+		})
+	})
+}
+
+function finishReq(req, that) {
+	that._sent = true
+
+	if(that.auth) {
+		var auth = hawk.client.header(req.request.uri, req.request.method, { credentials: that.auth })
 		req.request.headers.Authorization = auth.field //no clue why .setHeader() doesnt work
 	}
 
-	var that = this
+	if(!that.callback) return req //breakpoint
+
 	var response
 	req.on('response', function (res) {
 		response = res
-		that.emit('response', res)
 	})
 	
+	var cb = that.callback
 	req.pipe(concat(function(err, body) {
-		if(err) return that.emit('error', err)
+		if(err) return cb(err)
 		try {
 			body = JSON.parse(body)
-		} catch(e) {
-			console.log(e)
-		}
+		} catch(e) {}
 
-		that.emit('body', body)
-
-		if(callback) callback(err, response, body)
+		cb(err, response, body)
 	}))
 }
