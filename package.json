@@ -14,7 +14,7 @@
     "url": "https://github.com/hendrikcech/tent-request.git"
   },
   "scripts": {
-    "test": "vows ./test/*.js --spec"
+    "test": "vows ./test/*.js"
   },
   "author": {
     "name": "Hendrik Cech",

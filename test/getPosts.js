@@ -31,12 +31,20 @@ vows.describe('getPosts()').addBatch({
 			'types() multiple': testSetter(['http://ty.pe', 'https://ty.pe'], { types: 'http://ty.pe,https://ty.pe' }),
 			'entities() single': testSetter('http://enti.ty', { entities: 'http://enti.ty' }),
 			'entities() multiple': testSetter(['http://enti.ty', 'https://enti.ty'], { entities: 'http://enti.ty,https://enti.ty' }),
-			//'mentions()': testSetter('version.published_at', {}),
+			'mentions()': testSetter(['http://enti.ty' + '+id',/*AND*/ 'https://enti.ty'], /*OR*/ 'http://pet.er', {mentions: [ 'http://enti.ty+id,https://enti.ty', 'http://pet.er' ]}),
 		}
 	}
 }).export(module)
 
 function testSetter(arg, expected) {
+	var length = arguments.length
+	var apply
+	if(length > 2) {
+		arg = Array.prototype.slice.call(arguments, 0, arguments.length - 1)
+		expected = arguments[arguments.length - 1] //last element
+		apply = true
+	}
+
 	var context = {
 		topic: function(client) {
 			var split = this.context.name.split(/ +/) // ['published_at()', 'comment']
@@ -44,7 +52,8 @@ function testSetter(arg, expected) {
 			command = command.slice(0, -2)	// 'published_at'
 
 			var query = client.getPosts()
-			query[command](arg)
+			if(!apply) query[command](arg)
+			else query[command].apply(this, arg)
 			return query.print()
 		}
 	}

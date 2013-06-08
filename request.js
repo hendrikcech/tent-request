@@ -160,6 +160,9 @@ function getPosts(urls, auth, callback) {
 getPosts.prototype._send = function() {
 	var url = this.urls.posts_feed
 	var param = qs.stringify(this.query)
+	param = param.replace(/%2C/g, ',')
+	param = param.replace(/%2B/g, '+')
+
 	if(param) url += '?' + param
 
 	var req = hyperquest(url, { method: this.method })
@@ -198,29 +201,28 @@ getPosts.prototype.before = function(before) {
 getPosts.prototype.types = function(arg) {
 	if(this._sent) throw new Error('request already sent')
 	if(typeof arg === 'string') arg = [arg]
-	this.query.types = commaSeperate(arg)
+	this.query.types = arg.join()
 	return this.stream
-}
-
-function commaSeperate(items) { //array
-	var res = ''
-	items.forEach(function(item, index) {
-		if(index === 0) res = item //is it the first item?
-		else res += ',' + item
-	})
-	return res
 }
 
 getPosts.prototype.entities = function(arg) {
 	if(this._sent) throw new Error('request already sent')
 	if(typeof arg === 'string') arg = [arg]
 
-	this.query.entities = commaSeperate(arg)
+	this.query.entities = arg.join()
 	return this.stream
 }
-getPosts.prototype.mentions = function(arg) {
+getPosts.prototype.mentions = function() {
 	if(this._sent) throw new Error('request already sent')
-	//TODO
+	var query = this.query.mentions = []
+	for(var i = 0; arguments.length > i; i++) {
+		var arg = arguments[i]
+		if(Array.isArray(arg))  //AND operator
+			query.push(arg.join(','))
+		else if(typeof arg === 'string') //OR operator
+			query.push(arg)
+	}
+
 	return this.stream
 }
 getPosts.prototype.count = function() {
