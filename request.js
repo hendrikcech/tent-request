@@ -147,7 +147,9 @@ function getPosts(urls, auth, callback) {
 	this.urls = urls
 	this.auth = auth
 	this.callback = callback || false
+	
 	this.query = {}
+	this.method = 'GET'
 
 	this.stream = through()
 	setupStream(this.stream, this)
@@ -160,7 +162,7 @@ getPosts.prototype._send = function() {
 	var param = qs.stringify(this.query)
 	if(param) url += '?' + param
 
-	var req = hyperquest.get(url)
+	var req = hyperquest(url, { method: this.method })
 	req.setHeader('Accept', 'application/vnd.tent.posts-feed.v0+json')
 
 	finishReq(req, this)
@@ -219,6 +221,11 @@ getPosts.prototype.entities = function(arg) {
 getPosts.prototype.mentions = function(arg) {
 	if(this._sent) throw new Error('request already sent')
 	//TODO
+	return this.stream
+}
+getPosts.prototype.count = function() {
+	if(this._sent) throw new Error('request already sent')
+	this.method = 'HEAD'
 	return this.stream
 }
 getPosts.prototype.print = function() {
@@ -285,9 +292,6 @@ getPost.prototype._send = function() {
 
 	finishReq(req, this) //bad style blabla
 
-	if(this.method === 'HEAD')
-		req.end() //bug in hyperquest: returns duplex stream
-
 	return req
 }
 
@@ -353,4 +357,7 @@ function finishReq(req, that) {
 
 		cb(err, response, body)
 	}))
+
+	if(that.method === 'HEAD')
+		req.end() //bug in hyperquest: returns duplex stream
 }

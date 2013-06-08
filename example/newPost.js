@@ -7,6 +7,10 @@ var post = client.newPost('https://tent.io/types/status/v0#', cb)
 	.content({
 		"text": "testTESTtestTEST"
 	})
+	.mention({
+		entity: 'http://bb216a47d970.alpha.attic.is',
+		post: '8osSyy7nKwCz3k3Xq5LBtQ'
+	})
 
 //post.pipe(process.stdout)
 
