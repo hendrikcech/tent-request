@@ -30,5 +30,8 @@
   },
   "devDependencies": {
     "vows": "~0.7.0"
+  },
+  "browser": {
+    "hawk": "./node_modules/hawk/lib/browser.js"
   }
 }
