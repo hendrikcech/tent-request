@@ -21,18 +21,26 @@ var Client = function(meta, auth) {
 		algorithm: auth.algorithm || auth.hawk_algorithm
 	}
 }
-Client.prototype.newPost = function(type, callback) {
+Client.prototype.create = function(type, callback) {
 	//if(!this.auth) 
-	return new newPost(this.meta.urls, this.auth, type, callback)
+	return new Create(this.meta.servers[0].urls, this.auth, type, callback)
 }
-Client.prototype.getPosts = function(callback) {
-	return new getPosts(this.meta.urls, this.auth, callback)
+Client.prototype.query = function(callback) {
+	return new Query(this.meta.servers[0].urls, this.auth, callback)
 }
-Client.prototype.getPost = function(entity, id, callback) {
-	return new getPost(this.meta.urls, this.auth, entity, id, callback)
+Client.prototype.get = function(entity, id, callback) {
+	return new Get(this.meta.servers[0].urls, this.auth,
+		this.meta.entity, entity, id, callback)
+}
+Client.prototype.update = function(id, callback) {
+	return new Update(this.meta.servers[0].urls, this.auth, id, callback)
+}
+Client.prototype.delete = function(id, callback) {
+	return new Destroy(this.meta.servers[0].urls, this.auth, id, callback)
 }
 
-function newPost(urls, auth, type, callback) {
+
+function Create(urls, auth, type, callback) {
 	this.urls = urls
 	this.auth = auth
 
@@ -50,12 +58,12 @@ function newPost(urls, auth, type, callback) {
 	return this.stream
 }
 
-newPost.prototype.published_at = function(time) {
+Create.prototype.publishedAt = function(time) {
 	if(this._sent) throw new Error('request already sent')
 	this.post.published_at = time
 	return this.stream
 }
-newPost.prototype.mention = function(arg) {
+Create.prototype.mentions = function(arg) {
 	if(this._sent) throw new Error('request already sent')
 	this.post.mentions = this.post.mentions || []
 
@@ -68,7 +76,7 @@ newPost.prototype.mention = function(arg) {
 
 	return this.stream
 }
-newPost.prototype.license = function(arg) {
+Create.prototype.licenses = function(arg) {
 	if(this._sent) throw new Error('request already sent')
 	this.post.licenses = this.post.licenses || []
 
@@ -81,17 +89,17 @@ newPost.prototype.license = function(arg) {
 
 	return this.stream
 }
-newPost.prototype.type = function(type) {
+Create.prototype.type = function(type) {
 	if(this._sent) throw new Error('request already sent')
 	this.post.type = type
 	return this.stream
 }
-newPost.prototype.content = function(content) {
+Create.prototype.content = function(content) {
 	if(this._sent) throw new Error('request already sent')
 	this.post.content = content
 	return this.stream
 }
-newPost.prototype.permissions = function(arg) {
+Create.prototype.permissions = function(arg) {
 	if(this._sent) throw new Error('request already sent')
 	// arg boolean: set public / not public
 	// arg string/array: public false, set entities and/or groups
@@ -122,10 +130,16 @@ newPost.prototype.permissions = function(arg) {
 	})
 	return this.stream
 }
-newPost.prototype.print = function() {
+Create.prototype.attachments = function() {
+	console.log('TODO')
+}
+Create.prototype.refs = function() {
+	console.log('TODO')
+}
+Create.prototype.print = function() {
 	return this.post
 }
-newPost.prototype._send = function() {
+Create.prototype._send = function() {
 	if(!this.post.type) {
 		var message = 'no post type defined'
 		if(this.callback) return this.callback(message)
@@ -143,7 +157,7 @@ newPost.prototype._send = function() {
 	return req
 }
 
-function getPosts(urls, auth, callback) {
+function Query(urls, auth, callback) {
 	this.urls = urls
 	this.auth = auth
 	this.callback = callback || false
@@ -157,7 +171,7 @@ function getPosts(urls, auth, callback) {
 	return this.stream
 }
 
-getPosts.prototype._send = function() {
+Query.prototype._send = function() {
 	var url = this.urls.posts_feed
 	var param = qs.stringify(this.query)
 	param = param.replace(/%2C/g, ',')
@@ -173,46 +187,46 @@ getPosts.prototype._send = function() {
 	return req
 }
 
-getPosts.prototype.limit = function(limit) {
+Query.prototype.limit = function(limit) {
 	if(this._sent) throw new Error('request already sent')
 	this.query.limit = limit
 	return this.stream
 }
-getPosts.prototype.sort_by = function(sorting) {
+Query.prototype.sortBy = function(sorting) {
 	if(this._sent) throw new Error('request already sent')
 	this.query.sort_by = sorting
 	return this.stream
 }
-getPosts.prototype.since = function(since) {
+Query.prototype.since = function(since) {
 	if(this._sent) throw new Error('request already sent')
 	this.query.since = since
 	return this.stream
 }
-getPosts.prototype.until = function(until) {
+Query.prototype.until = function(until) {
 	if(this._sent) throw new Error('request already sent')
 	this.query.until = until
 	return this.stream
 }
-getPosts.prototype.before = function(before) {
+Query.prototype.before = function(before) {
 	if(this._sent) throw new Error('request already sent')
 	this.query.before = before
 	return this.stream
 }
-getPosts.prototype.types = function(arg) {
+Query.prototype.types = function(arg) {
 	if(this._sent) throw new Error('request already sent')
 	if(typeof arg === 'string') arg = [arg]
 	this.query.types = arg.join()
 	return this.stream
 }
 
-getPosts.prototype.entities = function(arg) {
+Query.prototype.entities = function(arg) {
 	if(this._sent) throw new Error('request already sent')
 	if(typeof arg === 'string') arg = [arg]
 
 	this.query.entities = arg.join()
 	return this.stream
 }
-getPosts.prototype.mentions = function() {
+Query.prototype.mentions = function() {
 	if(this._sent) throw new Error('request already sent')
 	var query = this.query.mentions = []
 	for(var i = 0; arguments.length > i; i++) {
@@ -225,24 +239,37 @@ getPosts.prototype.mentions = function() {
 
 	return this.stream
 }
-getPosts.prototype.count = function() {
+Query.prototype.count = function() {
 	if(this._sent) throw new Error('request already sent')
 	this.method = 'HEAD'
 	return this.stream
 }
-getPosts.prototype.print = function() {
+Query.prototype.print = function() {
 	return this.query
 }
 
 
-function getPost(urls, auth, entity, id, callback) {
-	if(!entity) throw new Error('entity required')
-	if(!id) throw new Error('post id required')
+function Get(urls, auth, clientEntity, entity, id, callback) {
 	this.urls = urls
 	this.auth = auth
+
+	if(!entity) throw new Error('post id required')
+
+	//.get(entity, id[, cb])
 	this.entity = entity
 	this.id = id
 	this.callback = callback || false
+
+	if(!id && !callback) { //.get(id)
+		this.entity = clientEntity
+		this.id = entity
+	}
+	if(typeof id === 'function') { //.get(id, cb)
+		this.entity = clientEntity
+		this.id = entity
+		this.callback = id
+	}
+
 
 	this.acceptHeader = 'application/vnd.tent.post.v0+json'
 	this.method = 'GET'
@@ -254,29 +281,34 @@ function getPost(urls, auth, entity, id, callback) {
 	return this.stream
 }
 
-getPost.prototype.mentions = function() {
+Get.prototype.mentions = function() {
 	if(this._sent) throw new Error('request already sent')
 	this.acceptHeader = 'application/vnd.tent.post-mentions.v0+json'
 	return this.stream
 }
-getPost.prototype.versions = function() {
+Get.prototype.versions = function() {
 	if(this._sent) throw new Error('request already sent')
 	this.acceptHeader = 'application/vnd.tent.post-versions.v0+json'
 	return this.stream
 }
-getPost.prototype.childVersions = function(version) {
+Get.prototype.childVersions = function(version) {
 	if(this._sent) throw new Error('request already sent')
 	this.acceptHeader = 'application/vnd.tent.post-children.v0+json'
 	if(version) this.version = version
 	return this.stream
 }
-getPost.prototype.count = function() {
+Get.prototype.count = function() {
 	if(this._sent) throw new Error('request already sent')
 	this.method = 'HEAD'
 	return this.stream
 }
+Get.prototype.delete = function() {
+	if(this._sent) throw new Error('request already sent')
+	this.method = 'DELETE'
+	return this.stream
+}
 
-getPost.prototype.print = function() {
+Get.prototype.print = function() {
 	return [
 		this.acceptHeader,
 		this.method,
@@ -284,7 +316,7 @@ getPost.prototype.print = function() {
 	]
 }
 
-getPost.prototype._send = function() {
+Get.prototype._send = function() {
 	var tpl = urlParser.parse(this.urls.post)
 	var url = tpl.expand({ entity: this.entity, post: this.id })
 	if(this.version) url += '?=' + this.version
@@ -296,6 +328,15 @@ getPost.prototype._send = function() {
 
 	return req
 }
+
+function Update(urls, auth, id, callback) {
+	console.log('TODO')
+}
+
+function Destroy(urls, auth, id, callback) { //aka delete
+	console.log('TODO')
+}
+
 
 // https://github.com/substack/hyperquest/blob/master/index.js <3
 function bind(obj, fn) {
@@ -312,6 +353,8 @@ function setupStream(stream, that) {
 		if(!(/^_/.test(key))) //function name begins with _ (e.g. _send)
 			stream[key] = bind(that, that[key])
 	}
+
+	stream['base'] = that
 
 	var closed = false
 	stream.on('close', function() { closed = true })

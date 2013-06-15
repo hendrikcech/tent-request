@@ -3,7 +3,7 @@ var assert = require('assert')
 var request = require('../request')
 var meta = require('./config.json').meta
 
-vows.describe('getPosts()').addBatch({
+vows.describe('query()').addBatch({
 	'': {
 		topic: function() {
 			var client = request.createClient(meta)
@@ -11,19 +11,19 @@ vows.describe('getPosts()').addBatch({
 		},
 		'send()': {
 			'vanilla': assertResponse(function(client) {
-				client.getPosts(this.callback)
+				client.query(this.callback)
 			}),
 			'with limit': assertResponse(
 				function(client) {
-					client.getPosts(this.callback).limit(2)
+					client.query(this.callback).limit(2)
 				}, ['exactly two responses', function(err, res, body) {
-					assert.equal(body.data.length, 2)
+					assert.equal(body.posts.length, 2)
 				}]
 			)
 		},
 		'setters': {
 			'limit()': testSetter(25, { limit: 25 }),
-			'sort_by()': testSetter('version.published_at', { sort_by: 'version.published_at' }),
+			'sortBy()': testSetter('version.published_at', { sort_by: 'version.published_at' }),
 			'since()': testSetter(123456789, { since:  123456789 }),
 			'until()': testSetter(123456789, { until:  123456789 }),
 			'before()': testSetter(123456789, { before: 123456789 }),
@@ -51,9 +51,10 @@ function testSetter(arg, expected) {
 			var command = split[0] // 'published_at()'
 			command = command.slice(0, -2)	// 'published_at'
 
-			var query = client.getPosts()
+			var query = client.query()
 			if(!apply) query[command](arg)
-			else query[command].apply(this, arg)
+			else query[command].apply(this, arg) //ugly sorry
+
 			return query.print()
 		}
 	}
@@ -77,7 +78,7 @@ function assertResponse(topicFn) {
 		},
 		'valid body': function(err, res, body) {
 			assert.include(body, 'pages')
-			assert.include(body, 'data')
+			assert.include(body, 'posts')
 		}
 	}
 	if(arguments.length === 1) return context

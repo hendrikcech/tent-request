@@ -1,27 +1,39 @@
 var vows = require('vows')
 var assert = require('assert')
 var request = require('../request')
-var meta = require('./config.json').meta
-var entity = require('./config.json').entity
-var rndPost = require('./config.json').rndPost
+var config = require('./config.json')
 
-vows.describe('getPost()').addBatch({
+var meta = config.meta
+var entity = meta.entity
+var rndPost = config.rndPost
+var fn = new Function()
+
+vows.describe('get()').addBatch({
 	'': {
 		topic: function() {
 			var client = request.createClient(meta)
 			return client
 		},
+		'constructor': {
+			'id': testConstructor(['id'], [entity, 'id', false]),
+			'entity, id': testConstructor(['entity', 'id'],
+				['entity', 'id', false]),
+			'id, cb': testConstructor(['id', fn],
+				[entity, 'id', fn]),
+			'entity, id, cb': testConstructor(['entity', 'id', fn],
+				['entity', 'id', fn])
+		},
 		'send()': {
 			'vanilla': assertResponse(
 				function(client) {
-					client.getPost(entity, rndPost, this.callback)
+					client.get(entity, rndPost, this.callback)
 				}, ['valid body', function(err, res, body) {
-					assert.include(body, 'content')
+					assert.include(body.post, 'content')
 				}]
 			),
 			'count': assertResponse(
 				function(client) {
-					client.getPost(entity, rndPost, this.callback).mentions().count()
+					client.get(entity, rndPost, this.callback).mentions().count()
 				}, ['count in body', function(err, res, count) {
 					assert.isNumber(count)
 				}]
@@ -29,18 +41,40 @@ vows.describe('getPost()').addBatch({
 		},
 		'setters': { // [acceptHeader, method, version]
 			'mentions()':
-				testSetter(null, ['application/vnd.tent.post-mentions.v0+json', 'GET', false]),
+				testSetter(null, ['application/vnd.tent.post-mentions.v0+json',
+					'GET', false]),
 			'versions()':
-				testSetter(null, ['application/vnd.tent.post-versions.v0+json', 'GET', false]),
+				testSetter(null, ['application/vnd.tent.post-versions.v0+json',
+					'GET', false]),
 			'childVersions() without version':
-				testSetter(null, ['application/vnd.tent.post-children.v0+json', 'GET', false]),
+				testSetter(null, ['application/vnd.tent.post-children.v0+json',
+					'GET', false]),
 			'childVersions() with version':
-				testSetter('asdffdas', ['application/vnd.tent.post-children.v0+json', 'GET', 'asdffdas']),
+				testSetter('asdffdas', ['application/vnd.tent.post-children.v0+json',
+					'GET', 'asdffdas']),
 			'count()':
 				testSetter(null, ['application/vnd.tent.post.v0+json', 'HEAD', false])
 		}
 	}
 }).export(module)
+
+function testConstructor(args, expected) {
+	var context = {
+		topic: function(client) {
+			var query = client.get.apply(client, args)
+			return [
+				query.base.entity,
+				query.base.id,
+				query.base.callback
+			]
+		},
+		valid: function(res) {
+			assert.deepEqual(res, expected)
+		}
+	}
+
+	return context
+}
 
 function testSetter(arg, expected) {
 	var context = {
@@ -49,7 +83,7 @@ function testSetter(arg, expected) {
 			var command = split[0] // 'published_at()'
 			command = command.slice(0, -2)	// 'published_at'
 
-			var post = client.getPost('http://enti.ty', 'postID')
+			var post = client.get('http://enti.ty', 'postID')
 
 			post[command](arg)
 			return post.print()
