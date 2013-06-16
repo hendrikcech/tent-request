@@ -36,7 +36,7 @@ Client.prototype.update = function(id, callback) {
 	return new Update(this.meta.servers[0].urls, this.auth, id, callback)
 }
 Client.prototype.delete = function(id, callback) {
-	return new Destroy(this.meta.servers[0].urls, this.auth, id, callback)
+	return new Destroy(this.meta.servers[0].urls, this.auth, this.meta.entity, id, callback)
 }
 
 
@@ -319,7 +319,7 @@ Get.prototype.print = function() {
 Get.prototype._send = function() {
 	var tpl = urlParser.parse(this.urls.post)
 	var url = tpl.expand({ entity: this.entity, post: this.id })
-	if(this.version) url += '?=' + this.version
+	if(this.version) url += '?=' + this.version // TODO?!
 
 	var req = hyperquest(url, { method: this.method })
 	req.setHeader('Accept', this.acceptHeader)
@@ -333,8 +333,49 @@ function Update(urls, auth, id, callback) {
 	console.log('TODO')
 }
 
-function Destroy(urls, auth, id, callback) { //aka delete
-	console.log('TODO')
+function Destroy(urls, auth, entity, id, callback) { //aka delete
+	this.urls = urls
+	this.auth = auth
+	this.entity = entity
+
+	if(!id) throw new Error('post id required to delete post')
+
+	this.id = id
+	this.callback = callback || false
+
+	//this.acceptHeader ?!
+	this.versionQuery = false
+	this.createDeletePostHeader = null
+
+	this.stream = through()
+	setupStream(this.stream, this)
+
+	return this.stream
+}
+Destroy.prototype.version = function(version) {
+	if(this._sent) throw new Error('request already sent')
+	this.versionQuery = version
+	return this.stream
+}
+Destroy.prototype.createDeletePost = function(bool) {
+	if(this._sent) throw new Error('request already sent')
+	this.createDeletePostHeader = bool
+	return this.stream
+}
+Destroy.prototype._send = function() {
+	var tpl = urlParser.parse(this.urls.post)
+	var url = tpl.expand({ entity: this.entity, post: this.id })
+	if(this.versionQuery) url += '?version=' + this.versionQuery
+	
+	var req = hyperquest.delete(url)
+	
+	if(typeof this.createDeletePostHeader === 'boolean')
+		req.setHeader('Create-Delete-Post', this.createDeletePostHeader)
+
+	finishReq(req, this)
+
+	console.log(req.request)
+	return req
 }
 
 
