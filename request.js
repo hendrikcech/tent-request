@@ -1,10 +1,11 @@
 var hyperquest = require('hyperquest')
-var url = require('url')
+var urlMod = require('url')
 var concat = require('concat-stream')
 var hawk = require('hawk')
 var qs = require('querystring')
 var urlParser = require('uri-template')
 var through = require('through')
+var util = require('util')
 
 exports.createClient = function(meta, auth) {
 	if(!meta) throw new Error('meta post required')
@@ -13,6 +14,30 @@ exports.createClient = function(meta, auth) {
 
 var Client = function(meta, auth) {
 	if(!meta) throw new Error('meta post required')
+
+	// test if browserified version runs on the client on a "non-standard" port.
+	// if so, explicitly append the port to the urls to prevent xhr calls
+	// going to the local port instead of the intended standard port
+	// (80 for http and 443 for https)
+	if(typeof window !== 'undefined' && window.location.port) {
+		meta.servers.forEach(function(server) {
+			var urls = server.urls
+			for(var url in urls) {
+				var parsed = urlMod.parse(urls[url])
+				var port = null
+				if(!parsed.port) {
+					if(parsed.protocol === 'http:') port = 80
+					else if(parsed.protocol === 'https:') port = 443
+				}
+				if(port) {
+					parsed.port = port
+					parsed.host += ':' + port //why, just why?!
+					urls[url] = urlMod.format(parsed)
+				}
+			}
+		})
+	}
+
 	this.meta = meta
 	if(!auth) this.auth = false
 	else this.auth = {
@@ -28,16 +53,17 @@ Client.prototype.create = function(type, callback) {
 Client.prototype.query = function(callback) {
 	return new Query(this.meta.servers[0].urls, this.auth, callback)
 }
-Client.prototype.get = function(entity, id, callback) {
+Client.prototype.get = function(id, entity, callback) {
 	return new Get(this.meta.servers[0].urls, this.auth,
-		this.meta.entity, entity, id, callback)
+		this.meta.entity, id, entity, callback)
 }
 Client.prototype.update = function(id, parent, callback) {
 	return new Update(this.meta.servers[0].urls, this.auth,
 		this.meta.entity, id, parent, callback)
 }
 Client.prototype.delete = function(id, callback) {
-	return new Destroy(this.meta.servers[0].urls, this.auth, this.meta.entity, id, callback)
+	return new Destroy(this.meta.servers[0].urls, this.auth, this.meta.entity,
+		id, callback)
 }
 
 
@@ -47,11 +73,11 @@ function Create(urls, auth, type, callback) {
 
 	this.post = {}
 
-	if(typeof type === 'function') this.callback = type
-	else if(type) {
-		this.post.type = type
-		this.callback = callback || false
-	}
+	if(typeof type === 'string') this.post.type = type
+	else if(typeof type === 'object') this.post = type
+	else if(typeof type === 'function') this.callback = type
+	
+	this.callback = callback || false
 
 	this.stream = through()
 	setupStream(this.stream, this)
@@ -59,87 +85,23 @@ function Create(urls, auth, type, callback) {
 	return this.stream
 }
 
+util.inherits(Create, postSetter)
+
 Create.prototype.publishedAt = function(time) {
 	if(this._sent) throw new Error('request already sent')
-	this.post.published_at = time
+	if(time === null) delete this.query.published_at
+	else this.post.published_at = time
 	return this.stream
 }
-Create.prototype.mentions = function(arg) {
-	if(this._sent) throw new Error('request already sent')
-	this.post.mentions = this.post.mentions || []
 
-	if(!Array.isArray(arg)) arg = [arg]
-
-	var that = this
-	arg.forEach(function(mention) {
-		that.post.mentions.push(mention)
-	})
-
-	return this.stream
-}
-Create.prototype.licenses = function(arg) {
-	if(this._sent) throw new Error('request already sent')
-	this.post.licenses = this.post.licenses || []
-
-	if(!Array.isArray(arg)) arg = [arg]
-
-	var that = this
-	arg.forEach(function(licenseURL) {
-		that.post.licenses.push({ url: licenseURL })
-	})
-
-	return this.stream
-}
-Create.prototype.type = function(type) {
-	if(this._sent) throw new Error('request already sent')
-	this.post.type = type
-	return this.stream
-}
-Create.prototype.content = function(content) {
-	if(this._sent) throw new Error('request already sent')
-	this.post.content = content
-	return this.stream
-}
-Create.prototype.permissions = function(arg) {
-	if(this._sent) throw new Error('request already sent')
-	// arg boolean: set public / not public
-	// arg string/array: public false, set entities and/or groups
-
-	this.post.permissions = this.post.permissions || {}
-
-	if(typeof arg === 'boolean') {
-		this.post.permissions.public = arguments[0]
-		return this.stream
-	}
-
-	this.post.permissions.public = false
-
-	if(typeof arg === 'string') arg = [arg]
-
-	var that = this
-	arg.forEach(function(id) {
-		var parsed = url.parse(id)
-
-		// entity or group id?
-		if(parsed.protocol === 'https:' || parsed.protocol === 'http:') {
-			that.post.permissions.entities = that.post.permissions.entities || []
-			that.post.permissions.entities.push(id)
-		} else { // group id
-			that.post.permissions.groups = that.post.permissions.groups || []
-			that.post.permissions.groups.push({ post: id })
-		}
-	})
-	return this.stream
-}
 Create.prototype.attachments = function() {
 	console.log('TODO')
 }
-Create.prototype.refs = function() {
-	console.log('TODO')
-}
+
 Create.prototype.print = function() {
 	return this.post
 }
+
 Create.prototype._send = function() {
 	if(!this.post.type) {
 		var message = 'no post type defined'
@@ -190,41 +152,57 @@ Query.prototype._send = function() {
 
 Query.prototype.limit = function(limit) {
 	if(this._sent) throw new Error('request already sent')
-	this.query.limit = limit
+	if(limit === null) delete this.query.limit
+	else this.query.limit = limit
 	return this.stream
 }
 Query.prototype.sortBy = function(sorting) {
 	if(this._sent) throw new Error('request already sent')
-	this.query.sort_by = sorting
+	if(sorting === null) delete this.query.sort_by
+	else this.query.sort_by = sorting
 	return this.stream
 }
 Query.prototype.since = function(since) {
 	if(this._sent) throw new Error('request already sent')
+	if(since === null) delete this.query.since
 	this.query.since = since
 	return this.stream
 }
 Query.prototype.until = function(until) {
 	if(this._sent) throw new Error('request already sent')
-	this.query.until = until
+	if(until === null) delete this.query.until
+	else this.query.until = until
 	return this.stream
 }
 Query.prototype.before = function(before) {
 	if(this._sent) throw new Error('request already sent')
-	this.query.before = before
+	if(before === null) delete this.query.before
+	else this.query.before = before
 	return this.stream
 }
 Query.prototype.types = function(arg) {
 	if(this._sent) throw new Error('request already sent')
-	if(typeof arg === 'string') arg = [arg]
-	this.query.types = arg.join()
+	if(arg === null) delete this.query.types
+	else {
+		if(typeof arg === 'string') arg = [arg]
+		this.query.types = this.query.types || ''
+		this.query.types = this.query.types.split(',')
+		if(this.query.types[0] === '') this.query.types = []
+		this.query.types = this.query.types.concat(arg).join()
+	}
 	return this.stream
 }
 
 Query.prototype.entities = function(arg) {
 	if(this._sent) throw new Error('request already sent')
-	if(typeof arg === 'string') arg = [arg]
-
-	this.query.entities = arg.join()
+	if(arg === null) delete this.query.entities
+	else {
+		if(typeof arg === 'string') arg = [arg]
+		this.query.entities = this.query.entities || ''
+		this.query.entities = this.query.entities.split(',')
+		if(this.query.entities[0] === '') this.query.entities = []
+		this.query.entities = this.query.entities.concat(arg).join()
+	}
 	return this.stream
 }
 Query.prototype.mentions = function() {
@@ -250,25 +228,25 @@ Query.prototype.print = function() {
 }
 
 
-function Get(urls, auth, clientEntity, entity, id, callback) {
+function Get(urls, auth, clientEntity, id, entity, callback) {
 	this.urls = urls
 	this.auth = auth
 
-	if(!entity) throw new Error('post id required')
+	if(!id) throw new Error('post id required')
 
-	//.get(entity, id[, cb])
-	this.entity = entity
+	//.get(id, entity[, cb])
 	this.id = id
+	this.entity = entity
 	this.callback = callback || false
 
-	if(!id && !callback) { //.get(id)
+	if(!entity && !callback) { //.get(id)
+		this.id = id
 		this.entity = clientEntity
-		this.id = entity
 	}
-	if(typeof id === 'function') { //.get(id, cb)
+	if(typeof entity === 'function') { //.get(id, cb)
+		this.id = id
 		this.entity = clientEntity
-		this.id = entity
-		this.callback = id
+		this.callback = entity
 	}
 
 
@@ -330,43 +308,69 @@ Get.prototype._send = function() {
 	return req
 }
 
-function Update(urls, auth, entity, id, parent, callback) {
+function Update(urls, auth, entity, id, parents, callback) {
 	this.urls = urls
 	this.auth = auth
 	this.entity = entity
 
-	if(!entity) throw new Error('post id required to update a post')
-	if(!parent) throw new Error('parent hash required to update a post') //?!
-	
+	if(!id) throw new Error('post id required to update a post')
 	this.id = id
-	this.parent = parent
-	this.callback = callback || false
+	
+	this.post = { version: { parents: [] }}
 
-	this.post = {}
+	this.callback = false
+
+	if(typeof parents === 'function') //(id, cb)
+		this.callback = parents
+	else if(parents) //(id, parents, ..?)
+		this.parents(parents)
+
+	if(callback) this.callback = callback //(id, parents, cb)
 
 	this.stream = through()
 	setupStream(this.stream, this)
 
 	return this.stream
 }
-Update.prototype.type = function(type) {
+
+util.inherits(Update, postSetter)
+
+Update.prototype.versionMessage = function(message) {
 	if(this._sent) throw new Error('request already sent')
-	this.post.type = type
+	if(message === null) delete this.post.version.message
+	else this.post.version.message = message
 	return this.stream
 }
-Update.prototype.content = function(content) {
+Update.prototype.versionPublishedAt = function(publishedAt) {
 	if(this._sent) throw new Error('request already sent')
-	this.post.content = content
+	if(publishedAt === null) delete this.post.version.published_at
+	else this.post.version.published_at = publishedAt
+	return this.stream
+}	
+Update.prototype.parents = function(arg) {
+	if(this._sent) throw new Error('request already sent')
+	if(arg === null) {
+		delete this.post.version.parents
+		this.post.version = {}
+		this.post.version.parents = []
+		return this.stream
+	}
+
+	if(!Array.isArray(arg)) arg = [arg] //actually just one parent
+
+	arg.forEach(function(parent) {
+		if(typeof parent === 'object') //parent hash
+			this.post.version.parents.push(parent)
+		else
+			this.post.version.parents.push({ version: parent })
+	}.bind(this))
+
 	return this.stream
 }
 
 Update.prototype._send = function() {
 	var tpl = urlParser.parse(this.urls.post)
 	var url = tpl.expand({ entity: this.entity, post: this.id })
-
-	this.post.version = this.post.version || {}
-	this.post.version.parents = []
-	this.post.version.parents.push({ version: this.parent })
 
 	var req = hyperquest.put(url)
 	req.setHeader('Content-Type',
@@ -376,7 +380,8 @@ Update.prototype._send = function() {
 
 	req.end(JSON.stringify(this.post))
 
-	console.log(req.request)
+	//console.log(req.request)
+	//console.log(JSON.stringify(this.post))
 
 	return req
 }
@@ -422,8 +427,87 @@ Destroy.prototype._send = function() {
 
 	finishReq(req, this)
 
-	console.log(req.request)
+	//console.log(req.request)
 	return req
+}
+
+function postSetter() {}
+postSetter.prototype.mentions = function(arg) {
+	if(this._sent) throw new Error('request already sent')
+	if(arg === null) delete this.post.mentions
+	else {
+		this.post.mentions = this.post.mentions || []
+
+		if(!Array.isArray(arg)) arg = [arg]
+
+		arg.forEach(function(mention) {
+			this.post.mentions.push(mention)
+		}.bind(this))
+	}
+	return this.stream
+}
+postSetter.prototype.licenses = function(arg) {
+	if(this._sent) throw new Error('request already sent')
+	if(arg === null) delete this.post.licenses
+	this.post.licenses = this.post.licenses || []
+
+	if(!Array.isArray(arg)) arg = [arg]
+
+	arg.forEach(function(licenseURL) {
+		this.post.licenses.push({ url: licenseURL })
+	}.bind(this))
+
+	return this.stream
+}
+postSetter.prototype.type = function(type) {
+	if(this._sent) throw new Error('request already sent')
+	if(type === null) delete this.post.type
+	else this.post.type = type
+	return this.stream
+}
+postSetter.prototype.content = function(content) {
+	if(this._sent) throw new Error('request already sent')
+	if(content === null) delete this.post.content
+	else this.post.content = content
+	return this.stream
+}
+postSetter.prototype.permissions = function(arg) {
+	if(this._sent) throw new Error('request already sent')
+	// arg boolean: set public / not public
+	// arg string/array: public false, set entities and/or groups
+
+	if(arg === null) {
+		delete this.post.permissions
+		return this.stream
+	}
+
+	this.post.permissions = this.post.permissions || {}
+
+	if(typeof arg === 'boolean') {
+		this.post.permissions.public = arguments[0]
+		return this.stream
+	}
+
+	this.post.permissions.public = false
+
+	if(typeof arg === 'string') arg = [arg]
+
+	arg.forEach(function(id) {
+		var parsed = urlMod.parse(id)
+
+		// entity or group id?
+		if(parsed.protocol === 'https:' || parsed.protocol === 'http:') {
+			this.post.permissions.entities = this.post.permissions.entities || []
+			this.post.permissions.entities.push(id)
+		} else { // group id
+			this.post.permissions.groups = this.post.permissions.groups || []
+			this.post.permissions.groups.push({ post: id })
+		}
+	}.bind(this))
+	return this.stream
+}
+postSetter.prototype.refs = function() {
+	console.log('TODO')
 }
 
 
@@ -477,6 +561,7 @@ function finishReq(req, that) {
 	var response
 	req.on('response', function (res) {
 		response = res
+		res.setEncoding('utf8')
 	})
 	
 	var cb = that.callback
@@ -488,6 +573,11 @@ function finishReq(req, that) {
 		else try {
 			body = JSON.parse(body)
 		} catch(e) {}
+
+		if(response.statusCode !== 200 || (body && body.error))
+			return cb(response.statusCode
+				+ ((body && body.error) ? ': ' + body.error : '')
+				, response)
 
 		cb(err, response, body)
 	}))

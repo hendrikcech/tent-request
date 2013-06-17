@@ -15,25 +15,25 @@ vows.describe('get()').addBatch({
 			return client
 		},
 		'constructor': {
-			'id': testConstructor(['id'], [entity, 'id', false]),
-			'entity, id': testConstructor(['entity', 'id'],
-				['entity', 'id', false]),
+			'id': testConstructor(['id'], ['id', entity, false]),
+			'id, entity': testConstructor(['id', 'entity'],
+				['id', 'entity', false]),
 			'id, cb': testConstructor(['id', fn],
-				[entity, 'id', fn]),
-			'entity, id, cb': testConstructor(['entity', 'id', fn],
-				['entity', 'id', fn])
+				['id', entity, fn]),
+			'id, entity, cb': testConstructor(['id', 'entity', fn],
+				['id', 'entity', fn])
 		},
 		'send()': {
 			'vanilla': assertResponse(
 				function(client) {
-					client.get(entity, rndPost, this.callback)
+					client.get(rndPost, entity, this.callback)
 				}, ['valid body', function(err, res, body) {
 					assert.include(body.post, 'content')
 				}]
 			),
 			'count': assertResponse(
 				function(client) {
-					client.get(entity, rndPost, this.callback).mentions().count()
+					client.get(rndPost, entity, this.callback).mentions().count()
 				}, ['count in body', function(err, res, count) {
 					assert.isNumber(count)
 				}]
@@ -63,8 +63,8 @@ function testConstructor(args, expected) {
 		topic: function(client) {
 			var query = client.get.apply(client, args)
 			return [
-				query.base.entity,
 				query.base.id,
+				query.base.entity,
 				query.base.callback
 			]
 		},
