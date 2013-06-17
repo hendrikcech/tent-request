@@ -32,8 +32,9 @@ Client.prototype.get = function(entity, id, callback) {
 	return new Get(this.meta.servers[0].urls, this.auth,
 		this.meta.entity, entity, id, callback)
 }
-Client.prototype.update = function(id, callback) {
-	return new Update(this.meta.servers[0].urls, this.auth, id, callback)
+Client.prototype.update = function(id, parent, callback) {
+	return new Update(this.meta.servers[0].urls, this.auth,
+		this.meta.entity, id, parent, callback)
 }
 Client.prototype.delete = function(id, callback) {
 	return new Destroy(this.meta.servers[0].urls, this.auth, this.meta.entity, id, callback)
@@ -319,7 +320,7 @@ Get.prototype.print = function() {
 Get.prototype._send = function() {
 	var tpl = urlParser.parse(this.urls.post)
 	var url = tpl.expand({ entity: this.entity, post: this.id })
-	if(this.version) url += '?=' + this.version // TODO?!
+	if(this.version) url += '?version=' + this.version
 
 	var req = hyperquest(url, { method: this.method })
 	req.setHeader('Accept', this.acceptHeader)
@@ -329,8 +330,55 @@ Get.prototype._send = function() {
 	return req
 }
 
-function Update(urls, auth, id, callback) {
-	console.log('TODO')
+function Update(urls, auth, entity, id, parent, callback) {
+	this.urls = urls
+	this.auth = auth
+	this.entity = entity
+
+	if(!entity) throw new Error('post id required to update a post')
+	if(!parent) throw new Error('parent hash required to update a post') //?!
+	
+	this.id = id
+	this.parent = parent
+	this.callback = callback || false
+
+	this.post = {}
+
+	this.stream = through()
+	setupStream(this.stream, this)
+
+	return this.stream
+}
+Update.prototype.type = function(type) {
+	if(this._sent) throw new Error('request already sent')
+	this.post.type = type
+	return this.stream
+}
+Update.prototype.content = function(content) {
+	if(this._sent) throw new Error('request already sent')
+	this.post.content = content
+	return this.stream
+}
+
+Update.prototype._send = function() {
+	var tpl = urlParser.parse(this.urls.post)
+	var url = tpl.expand({ entity: this.entity, post: this.id })
+
+	this.post.version = this.post.version || {}
+	this.post.version.parents = []
+	this.post.version.parents.push({ version: this.parent })
+
+	var req = hyperquest.put(url)
+	req.setHeader('Content-Type',
+		'application/vnd.tent.post.v0+json; type="'+this.post.type+'"')
+
+	finishReq(req, this)
+
+	req.end(JSON.stringify(this.post))
+
+	console.log(req.request)
+
+	return req
 }
 
 function Destroy(urls, auth, entity, id, callback) { //aka delete
