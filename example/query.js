@@ -4,16 +4,14 @@ var auth = require('../test/config.json').auth
 
 var client = request.createClient(meta)
 var posts = client.query(cb)
-	.limit(2)
+	.limit(1)
 	//.since(1369577987802)
 	//.count()
-	//.types(['hi', 'jo', 'ma'])
-	//.mentions(['http://enti.ty' + '+id',/*AND*/ 'https://enti.ty'], /*OR*/ 'http://pet.er')
 	
 function cb(err, res, body) {
 	if(err) return console.error(err)
 	console.log(res.statusCode)
-	console.log(body)
+	console.log(body.posts[0])
 }
 
 //posts.pipe(process.stdout)
