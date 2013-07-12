@@ -571,7 +571,7 @@ function finishReq(req, that) {
 	var response
 	req.on('response', function (res) {
 		response = res
-		res.setEncoding('utf8')
+		//res.setEncoding('utf8')
 	})
 	
 	var cb = that.callback
