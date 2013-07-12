@@ -36,8 +36,8 @@ test('postSetter.mentions', function(t) {
 		'setting array')
 
 	arr.mentions('https://another.entity')
-	t.equal(arr.base.post.mentions[2],
-		[{ entity: 'https://another.entity' }],
+	t.deepEqual(arr.base.post.mentions[2],
+		{ entity: 'https://another.entity' },
 		'multiple calls are adding mentions')
 
 	t.end()

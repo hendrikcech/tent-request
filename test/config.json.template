@@ -1,20 +1,21 @@
 {
-	"entity": "",
-	"rndPost": "",
 	"meta": {
-		"version": "0.3",
-		"preference": 0,
-		"urls": {
-			"oauth_auth": "",
-			"oauth_token": "",
-			"posts_feed": "",
-			"post": "",
-			"new_post": "",
-			"post_attachment": "",
-			"attachment": "",
-			"batch": "",
-			"server_info": ""
-		}
+		"entity": "",
+		"servers": [{
+			"version": "",
+			"preference": 0,
+			"urls": {
+				"oauth_auth": "",
+				"oauth_token": "",
+				"posts_feed": "",
+				"post": "",
+				"new_post": "",
+				"post_attachment": "",
+				"attachment": "",
+				"batch": "",
+				"server_info": ""
+			}
+		 }]
 	},
 	"auth": {
 		"access_token": "",

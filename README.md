@@ -1,10 +1,11 @@
 # tent-request
 A node.js module to perform requests against a [Tent](https://tent.io) server, which supports the current version 0.3.
-Thanks to [browserify](https://github.com/substack/node-browserify) this module can be also used in the browser!
+Thanks to [browserify](https://github.com/substack/node-browserify) this module can also be used in the browser!
 
-There's still a lot to do, to fully support 0.3. I would be awesome if you could help! Take a look in the issues section of this repository and see what you can do.
+To fully support 0.3 there's still a lot to do. It would be awesome to see you helping! Take a look in the issues section of this repository and see what you can do.
+Please open an issue if you find an unsupported feature or a bug. 
 
-Please don't hesitate to open a issue or contact me via email, Tent (hendrik.tent.is) or IRC, if you have questions or ideas.
+Please generally don't hesitate to open a issue or contact me via email, Tent (hendrik.tent.is) or IRC, if you have questions or ideas.
 
 ## install
 With npm:
@@ -15,22 +16,20 @@ With npm:
 	var request = require('tent-request')
 
 Create a new client for each user with a meta post and optionally auth credentials.
-`meta` should be the content part of the meta post returned by the Tent server (`meta.post.content`).
+`meta` should be the content part of the meta post returned by the Tent server (`meta.post.content`). An example can be found in the [config template](test/config.json.template).
 `auth` should be an object with keys named `id` OR `access_token`, `key` OR `hawk_key` and `algorithm` OR `hawk_algorithm`.
 
 	var client = request.createClient(meta, auth)
 
 ## methods
-`client` exposes several APIs to interact with the users' Tent server.
+`client` exposes several functions to interact with the users' Tent server.
 If you have questions regarding the specific behaviour of some of these setters, don't be afraid to look in the source, it's pretty basic.
-
-You can pass `null` to pretty much all these setters to remove the corresponding content again.
 
 ### result (callback)
 All functions optionally take a callback as the last argument, which gets called after the full response is received.
 The `err` variable is null, unless `http.request()` throws an error, the status code is not 200 or the body contains an `error` key.
-The `response` object is forwarded from the underlying `http.request()`
-`body` either contains the JSON decoded response or a number, if a `count()` method was used.
+The `response` object is forwarded from the underlying `http.request()`.
+`body` either contains the JSON decoded response or a number, if the count of posts was requested.
 
 	function cb(err, response, body) {
 		if(err) return console.error(err)
@@ -38,39 +37,48 @@ The `response` object is forwarded from the underlying `http.request()`
 		console.log(body)
 	}
 
-Regardless of the callback, all functions return a readable stream, so that you can pipe the response wherever you want.
+Regardless of the callback, all functions return a readable stream.
 
 	client.query().pipe(process.stdout)
 
 ### .query
-This method communicates with the `posts_feed` server API and can be used to filter posts by certain criteria. More information [here](https://tent.io/docs/api#postsfeed). The parameters can be chained any order.
+This method communicates with the `posts_feed` server endpoint and can be used to filter posts by certain criteria. More information can be found [here](https://tent.io/docs/api#postsfeed). The parameters can be chained in any order.
 `||` seperates different possible parameters; read `OR`.
 
 	client.query([callback])
-		.limit(Number)
+		.limit(2) // limit the number of posts returned
 		.sortBy('received_at' || 'published_at'
-			|| 'version.received_at' || 'version.published_at')
-		.since(Number)
-		.until(Number)
-		.before(Number)
+			|| 'version.received_at' || 'version.published_at') // set sorting
+
+		// milliseconds since the Unix epoch
+		.since(1373643809000) // return posts since this point
+		.until(1373643814000) // return posts until this point
+		.before(1373643909000) // return posts before this point
 
 You can give these two functions either one parameters in form of a string or multiple as an array.
 
-		.types('http://ty.pe' || ['http://ty.pe', 'https://another.type'])
-		.entities('http://one.entity' || ['https://or.more', 'http://than.one'])
+		// only return post of these types
+		.types('http://ty.pe') // add one type
+		.types(['http://ty.pe', 'https://another.type']) // or multiple
+		
+		// only return published by these entities
+		.entities('http://one.entity') // one
+		.entities(['https://or.more', 'http://than.one']) // or multiple
+
 
 You can query for mentioned entities with AND and OR operators. Entities in one array are connected by AND operators, commata represent ORs.
 
+		// query for posts that mention these entities or posts
 		.mentions(['http://enti.ty' + '+id',/*AND*/ 'https://enti.ty'],
 			/*OR*/ 'http://pet.er')
 
-To get the count of matched posts, chain this function. Be aware, that the actual posts won't be returned!
+To get the count of matched posts, attach this function. Be aware, that the actual posts won't be returned!
 		
 		.count()
 
 ### .get
 Use this function to get a specific post from the [`post` server endpoint](https://tent.io/docs/api#post).
-`get()` requires the `id` of the post to get. If no entity is passed as the second parameter, the function will try to get a post with the given id from  the current entity.
+`get()` requires the `id` of the post to fetch. If no entity is passed as the second parameter, the function will try to get a post with the given id from  the current entity.
 	
 	client.get(id[, entity][, callback])
 
@@ -87,18 +95,28 @@ To get the count of matched posts, chain .count().
 ### .create
 Use this function to create a new post. Optionally the constructor takes the `type` (e.g. `https://tent.io/types/status/v0`) or the whole post. Information about the post schema can be found [here](https://tent.io/docs/posts#post-schema).
 
-	client.create(type || wholePostObject[, callback])
+	client.create([type || wholePostObject][, callback])
 
 These setters can be chained in any order.
 
-		.publishedAt(Number)
-		.type(String)
+		.publishedAt(1373643809000)
+		.type('https://tent.io/types/essay/v0')
 
 You can either give one license url as a string or multiple in an array.
 
-		.licenses('http://licen.se' || ['http://do.what', 'https://you.want'])
+		.licenses('http://licen.se' || ['http://dowhat.ever', 'https://you.want'])
 
-None of these keys are required, so set only the ones you want to. Multiple mentions can be given by passing an array of these objects.
+
+Populate the mentions array of the post.
+
+		.mentions('http://enti.ty') // either mention a entity,
+		.mentions('postID') // a post
+		.mentions('http://enti.ty postID') // or a post by another entity
+
+		// even multiple mentions in one call!
+		.mentions(['http://enti.ty', 'postId', 'https://enti.ty postId'])
+
+If you need to set the version, type or public status, pass a object containing one or more of these keys. Multiple mentions can be made by passing an array of these.
 
 		.mentions({
 			entity: 'http://entity.net',
@@ -107,17 +125,19 @@ None of these keys are required, so set only the ones you want to. Multiple ment
 			type: 'type',
 			public: true
 		})
-
-TODO CONTENT
 		
-		.content((String(key), String(val)) || Object) //merges?: changes
+Content can be set in two different ways: Either by passing an object with possibly multiple keys or by setting only one field through giving a key and the corresponding value.
+
+		.content('key', 'value')
+		.content({ text: 'Hi!', weather: 'great' })
 
 By passing a boolean value you can set the `public` status (true -> public, false -> private).
 Passing a string or an array of strings you can set the groups and entities to give permission to this post.
 To set the post public status and permit some entities access, call the permissions function multiple times.
 
-	 	.permissions(Boolean)
-	 	.permissions('https://enti.ty' || ['groupID', 'http://enti.ty'])
+	 	.permissions(false)
+	 	.permissions('https://enti.ty') // give this entity access
+	 	.permissions(['groupID', 'http://enti.ty'])
 
 ### .update
 This function creates new versions of posts.
@@ -126,27 +146,31 @@ After that you can pass either the version hash of a parent version or a full pa
 
 	client.update(id[, parentHashString || fullParentObject][, callback])
 
-Parents can be also set in the same form with a dedicated function. Calling this function multiple times, adds the new parents.
+Parents can be also set in the same form with a dedicated function.
 
 		.parents(parentHashString || fullParentObject)
 
 All setters of the `create` function expect `publishedAt` can be used here too.  
 Additionally these setters are available.
 
-		.versionPublishedAt(Number)
-		.versionMessage(String)
+		.versionPublishedAt(1373643809000)
+		.versionMessage('Awesome shiny new version.')
 
 ### .delete
 This function can be used to delete specific posts. The `id` parameter is required.
 
 	client.delete(id[, callback])
-		.version(String) // only delete a specific version
-		.createDeletePost(Boolean)
+		.version('as8df89asdf76asdf9') // only delete a specific version
+		.createDeletePost(false)
 
-### todo
-- implement getting and posting attachments
+# test
+Duplicate `test/config.json.template`, rename the file to `config.json` and populate it. Then do
 
-## license
+	npm test
+
+to run the tests.
+
+# license
 This software is released under the MIT license:
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of

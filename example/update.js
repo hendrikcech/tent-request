@@ -4,7 +4,7 @@ var config = require('../test/config.json')
 var client = request.createClient(config.meta, config.auth)
 var req = client.update('JumBJkaEJO6cXA90g8mumg')
 	.type('https://tent.io/types/status/v0#')
-	.message('Update, update!')
+	.versionMessage('Update, update!')
 	.content({ text: 'New Text!' })
 	.licenses('http://mylicen.se')
 

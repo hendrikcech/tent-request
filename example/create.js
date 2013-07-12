@@ -4,11 +4,8 @@ var auth = require('../test/config.json').auth
 
 var client = request.createClient(meta, auth)
 
-client.create('https://tent.io/types/status/v0#', cb)
-.content({
-	text: 'Täääst'
-})
-.permissions(false)
+var post = client.create('https://tent.io/types/status/v0#', cb)
+	.content('text', 'Have a nice day.')
 
 //post.pipe(process.stdout)
 
