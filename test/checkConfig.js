@@ -9,7 +9,7 @@ try {
 
 var c = config
 
-if(!c.rndPost || !c.meta || !c.meta.entity || !c.meta.servers
+if(!c.meta || !c.meta.entity || !c.meta.servers
 	|| !c.meta.servers[0].urls
 	|| !(c.auth.access_token || c.auth.id)
 	|| !(c.auth.hawk_key || c.auth.key)
