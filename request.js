@@ -77,7 +77,7 @@ function Create(urls, auth, type, callback) {
 	else if(typeof type === 'object') this.post = type
 	else if(typeof type === 'function') this.callback = type
 	
-	this.callback = callback || false
+	this.callback = this.callback || callback || false
 
 	this.stream = through()
 	setupStream(this.stream, this)
@@ -89,8 +89,7 @@ util.inherits(Create, postSetter)
 
 Create.prototype.publishedAt = function(time) {
 	if(this._sent) throw new Error('request already sent')
-	if(time === null) delete this.query.published_at
-	else this.post.published_at = time
+	this.post.published_at = arguments[arguments.length - 1]
 	return this.stream
 }
 
@@ -152,57 +151,47 @@ Query.prototype._send = function() {
 
 Query.prototype.limit = function(limit) {
 	if(this._sent) throw new Error('request already sent')
-	if(limit === null) delete this.query.limit
-	else this.query.limit = limit
+	this.query.limit = arguments[arguments.length-1]
 	return this.stream
 }
 Query.prototype.sortBy = function(sorting) {
 	if(this._sent) throw new Error('request already sent')
-	if(sorting === null) delete this.query.sort_by
-	else this.query.sort_by = sorting
+	this.query.sort_by = arguments[arguments.length-1]
 	return this.stream
 }
 Query.prototype.since = function(since) {
 	if(this._sent) throw new Error('request already sent')
-	if(since === null) delete this.query.since
-	this.query.since = since
+	this.query.since = arguments[arguments.length-1]
 	return this.stream
 }
 Query.prototype.until = function(until) {
 	if(this._sent) throw new Error('request already sent')
-	if(until === null) delete this.query.until
-	else this.query.until = until
+	this.query.until = arguments[arguments.length-1]
 	return this.stream
 }
 Query.prototype.before = function(before) {
 	if(this._sent) throw new Error('request already sent')
-	if(before === null) delete this.query.before
-	else this.query.before = before
+	this.query.before = arguments[arguments.length-1]
 	return this.stream
 }
 Query.prototype.types = function(arg) {
 	if(this._sent) throw new Error('request already sent')
-	if(arg === null) delete this.query.types
-	else {
-		if(typeof arg === 'string') arg = [arg]
-		this.query.types = this.query.types || ''
-		this.query.types = this.query.types.split(',')
-		if(this.query.types[0] === '') this.query.types = []
-		this.query.types = this.query.types.concat(arg).join()
-	}
+	this.query.types = concatArgsSetter(this.query.types,
+		arguments[arguments.length - 1])
 	return this.stream
 }
-
+function concatArgsSetter(key, val) {
+	if(typeof val === 'string') val = [val]
+	key = key || ''
+	key = key.split(',')
+	if(key[0] === '') key = []
+	key = key.concat(val).join()
+	return key
+}
 Query.prototype.entities = function(arg) {
 	if(this._sent) throw new Error('request already sent')
-	if(arg === null) delete this.query.entities
-	else {
-		if(typeof arg === 'string') arg = [arg]
-		this.query.entities = this.query.entities || ''
-		this.query.entities = this.query.entities.split(',')
-		if(this.query.entities[0] === '') this.query.entities = []
-		this.query.entities = this.query.entities.concat(arg).join()
-	}
+	this.query.entities = concatArgsSetter(this.query.entities,
+		arguments[arguments.length - 1])
 	return this.stream
 }
 Query.prototype.mentions = function() {
@@ -215,7 +204,6 @@ Query.prototype.mentions = function() {
 		else if(typeof arg === 'string') //OR operator
 			query.push(arg)
 	}
-
 	return this.stream
 }
 Query.prototype.count = function() {
@@ -273,7 +261,7 @@ Get.prototype.versions = function() {
 Get.prototype.childVersions = function(version) {
 	if(this._sent) throw new Error('request already sent')
 	this.acceptHeader = 'application/vnd.tent.post-children.v0+json'
-	if(version) this.version = version
+	if(version) this.version = arguments[arguments.length - 1]
 	return this.stream
 }
 Get.prototype.count = function() {
@@ -337,25 +325,18 @@ util.inherits(Update, postSetter)
 
 Update.prototype.versionMessage = function(message) {
 	if(this._sent) throw new Error('request already sent')
-	if(message === null) delete this.post.version.message
-	else this.post.version.message = message
+	this.post.version.message = arguments[arguments.length-1]
 	return this.stream
 }
 Update.prototype.versionPublishedAt = function(publishedAt) {
 	if(this._sent) throw new Error('request already sent')
-	if(publishedAt === null) delete this.post.version.published_at
-	else this.post.version.published_at = publishedAt
+	this.post.version.published_at = arguments[arguments.length-1]
 	return this.stream
 }	
 Update.prototype.parents = function(arg) {
 	if(this._sent) throw new Error('request already sent')
-	if(arg === null) {
-		delete this.post.version.parents
-		this.post.version = {}
-		this.post.version.parents = []
-		return this.stream
-	}
 
+	arg = arguments[arguments.length - 1]
 	if(!Array.isArray(arg)) arg = [arg] //actually just one parent
 
 	arg.forEach(function(parent) {
@@ -407,12 +388,12 @@ function Destroy(urls, auth, entity, id, callback) { //aka delete
 }
 Destroy.prototype.version = function(version) {
 	if(this._sent) throw new Error('request already sent')
-	this.versionQuery = version
+	this.versionQuery = arguments[arguments.length - 1]
 	return this.stream
 }
 Destroy.prototype.createDeletePost = function(bool) {
 	if(this._sent) throw new Error('request already sent')
-	this.createDeletePostHeader = bool
+	this.createDeletePostHeader = arguments[arguments.length - 1]
 	return this.stream
 }
 Destroy.prototype._send = function() {
@@ -434,21 +415,20 @@ Destroy.prototype._send = function() {
 function postSetter() {}
 postSetter.prototype.mentions = function(arg) {
 	if(this._sent) throw new Error('request already sent')
-	if(arg === null) delete this.post.mentions
-	else {
-		this.post.mentions = this.post.mentions || []
 
-		if(!Array.isArray(arg)) arg = [arg]
+	arg = arguments[arguments.length - 1]
+	this.post.mentions = this.post.mentions || []
 
-		arg.forEach(function(mention) {
-			this.post.mentions.push(mention)
-		}.bind(this))
-	}
+	if(!Array.isArray(arg)) arg = [arg]
+
+	arg.forEach(function(mention) {
+		this.post.mentions.push(mention)
+	}.bind(this))
 	return this.stream
 }
 postSetter.prototype.licenses = function(arg) {
 	if(this._sent) throw new Error('request already sent')
-	if(arg === null) delete this.post.licenses
+	arg = arguments[arguments.length - 1]
 	this.post.licenses = this.post.licenses || []
 
 	if(!Array.isArray(arg)) arg = [arg]
@@ -461,14 +441,23 @@ postSetter.prototype.licenses = function(arg) {
 }
 postSetter.prototype.type = function(type) {
 	if(this._sent) throw new Error('request already sent')
-	if(type === null) delete this.post.type
-	else this.post.type = type
+	this.post.type = arguments[arguments.length - 1]
 	return this.stream
 }
-postSetter.prototype.content = function(content) {
+postSetter.prototype.content = function(key, value) { // or just value
 	if(this._sent) throw new Error('request already sent')
-	if(content === null) delete this.post.content
-	else this.post.content = content
+	this.post.content = this.post.content || {}
+	
+	var lastArg = arguments[arguments.length - 1]
+	var ntLastArg = arguments[arguments.length - 2]
+
+	if(typeof ntLastArg === 'string') {
+		//(key, value)
+		this.post.content[ntLastArg] = lastArg
+	} else if(typeof lastArg === 'object') {
+		//replace or add values of object to posts content
+		for (var key in lastArg) { this.post.content[key] = lastArg[key] }
+	}
 	return this.stream
 }
 postSetter.prototype.permissions = function(arg) {
@@ -504,6 +493,7 @@ postSetter.prototype.permissions = function(arg) {
 			this.post.permissions.groups.push({ post: id })
 		}
 	}.bind(this))
+
 	return this.stream
 }
 postSetter.prototype.refs = function() {
@@ -513,11 +503,11 @@ postSetter.prototype.refs = function() {
 
 // https://github.com/substack/hyperquest/blob/master/index.js <3
 function bind(obj, fn) {
-  var args = Array.prototype.slice.call(arguments, 2)
-  return function () {
-    args = args.concat(Array.prototype.slice.call(arguments))
-    return fn.apply(obj, args)
-  }
+	var args = Array.prototype.slice.call(arguments, 2)
+	return function () {
+		args = args.concat(Array.prototype.slice.call(arguments))
+		return fn.apply(obj, args)
+	}
 }
 function setupStream(stream, that) {
 	stream.writable = false
