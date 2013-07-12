@@ -1,90 +1,88 @@
-var vows = require('vows')
-var assert = require('assert')
-var request = require('../request')
-var meta = require('./config.json').meta
+var test = require('tape')
 
-vows.describe('query()').addBatch({
-	'': {
-		topic: function() {
-			var client = request.createClient(meta)
-			return client
-		},
-		'send()': {
-			'vanilla': assertResponse(function(client) {
-				client.query(this.callback)
-			}),
-			'with limit': assertResponse(
-				function(client) {
-					client.query(this.callback).limit(2)
-				}, ['exactly two responses', function(err, res, body) {
-					assert.equal(body.posts.length, 2)
-				}]
-			)
-		},
-		'setters': {
-			'limit()': testSetter(25, { limit: 25 }),
-			'sortBy()': testSetter('version.published_at', { sort_by: 'version.published_at' }),
-			'since()': testSetter(123456789, { since:  123456789 }),
-			'until()': testSetter(123456789, { until:  123456789 }),
-			'before()': testSetter(123456789, { before: 123456789 }),
-			'types() single': testSetter('http://ty.pe', { types: 'http://ty.pe' }),
-			'types() multiple': testSetter(['http://ty.pe', 'https://ty.pe'], { types: 'http://ty.pe,https://ty.pe' }),
-			'entities() single': testSetter('http://enti.ty', { entities: 'http://enti.ty' }),
-			'entities() multiple': testSetter(['http://enti.ty', 'https://enti.ty'], { entities: 'http://enti.ty,https://enti.ty' }),
-			'mentions()': testSetter(['http://enti.ty' + '+id',/*AND*/ 'https://enti.ty'], /*OR*/ 'http://pet.er', {mentions: [ 'http://enti.ty+id,https://enti.ty', 'http://pet.er' ]}),
-		}
-	}
-}).export(module)
+var request = require('..')
+var config = require('./config.json')
 
-function testSetter(arg, expected) {
-	var length = arguments.length
-	var apply
-	if(length > 2) {
-		arg = Array.prototype.slice.call(arguments, 0, arguments.length - 1)
-		expected = arguments[arguments.length - 1] //last element
-		apply = true
-	}
+var client = request.createClient(config.meta, config.auth)
 
-	var context = {
-		topic: function(client) {
-			var split = this.context.name.split(/ +/) // ['published_at()', 'comment']
-			var command = split[0] // 'published_at()'
-			command = command.slice(0, -2)	// 'published_at'
+test('query() constructor', function(t) {
+	client.query().destroy()
+	t.pass('no arguments required')
 
-			var query = client.query()
-			if(!apply) query[command](arg)
-			else query[command].apply(this, arg) //ugly sorry
+	var cb = client.query(new Function).destroy()
+	t.ok(cb.base.callback, 'accepts callback')
 
-			return query.print()
-		}
-	}
-	context['valid'] = function(query) {
-		assert.deepEqual(query, expected)
-	}
+	t.end()
+})
 
-	return context
-}
+test('query.limit .since .until .before .sortBy', function(t) {
+	['limit', 'since', 'until', 'before'].forEach(function(key) {
+		var q = client.query()[key]('param').destroy()
 
-function assertResponse(topicFn) {
-	var context = {
-		topic: topicFn,
-		'no error': function(err, res, body) {
-			assert.isNull(err)
-			assert.isUndefined(body.error)
-			assert.equal(res.statusCode, 200)
-		},
-		'valid response object': function(err, res, body) {
-			assert.include(res, 'statusCode')
-		},
-		'valid body': function(err, res, body) {
-			assert.include(body, 'pages')
-			assert.include(body, 'posts')
-		}
-	}
-	if(arguments.length === 1) return context
+		t.deepEqual(q.base.query[key], 'param', '.' + key + ' arg set')
 
-	for(var i = 1; i<arguments.length; i++) {
-		context[arguments[i][0]] = arguments[i][1]
-	}
-	return context
-}
+		q[key]('nuuuu')
+		t.deepEqual(q.base.query[key], 'nuuuu',
+			'repeated call of .' + key + ' overwrites value')
+	})
+
+	var sortBy = client.query().sortBy('param').destroy()
+
+	t.deepEqual(sortBy.base.query.sort_by, 'param', '.sortBy arg set')
+
+	sortBy.sortBy('nuuuu')
+	t.deepEqual(sortBy.base.query.sort_by, 'nuuuu',
+		'repeated call of .sortBy overwrites value')
+
+	t.end()
+})
+
+test('query.types .entities', function(t) {
+	['types', 'entities'].forEach(function(key) {
+		var str = client.query()[key]('http://argu.ment').destroy()
+		t.deepEqual(str.base.query[key], 'http://argu.ment',
+			'.' + key + ' set string')
+
+		var arr = client.query()
+			[key](['http://argu.ment', 'https://another.one']).destroy()
+		t.deepEqual(arr.base.query[key], 'http://argu.ment,https://another.one',
+			'.' + key + ' set mulitple')
+
+		arr[key]('http://moaaaaa.rr')
+		t.deepEqual(arr.base.query[key],
+			'http://argu.ment,https://another.one,http://moaaaaa.rr',
+			'multiple .' + key + ' calls dont overwrite')
+	})
+	
+	t.end()
+})
+
+test('query.mentions', function(t) {
+	var single = client.query().mentions('http://entit.ty').destroy()
+	t.deepEqual(single.base.query.mentions, ['http://entit.ty'], 'single entity')
+
+	var and = client.query()
+		.mentions(['http://enti.ty', 'https://enti.ty']).destroy()
+	t.deepEqual(and.base.query.mentions, ['http://enti.ty,https://enti.ty'],
+		'multiple (and)')
+
+	var or = client.query()
+		.mentions('http://enti.ty', 'https://enti.ty').destroy()
+	t.deepEqual(or.base.query.mentions, ['http://enti.ty','https://enti.ty'],
+		'or')
+
+	var and2 = client.query()
+		.mentions(['http://enti.ty', 'https://enti.ty'], 'http://OOOOO.RRRR')
+		.destroy()
+	t.deepEqual(and2.base.query.mentions,
+		['http://enti.ty,https://enti.ty', 'http://OOOOO.RRRR'],
+		'multiple ands with or')
+
+	t.end()
+})
+
+test('query.count', function(t) {
+	var count = client.query().count().destroy()
+	t.equal(count.base.method, 'HEAD', 'works')
+	t.end()
+})
