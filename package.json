@@ -14,7 +14,8 @@
     "url": "https://github.com/hendrikcech/tent-request.git"
   },
   "scripts": {
-    "test": "vows ./test/*.js"
+    "pretest": "node ./test/checkConfig.js",
+    "test": "tape ./test/*.js"
   },
   "author": {
     "name": "Hendrik Cech",
@@ -29,7 +30,7 @@
     "through": "~2.3.4"
   },
   "devDependencies": {
-    "vows": "~0.7.0"
+    "tape": "~1.0.4"
   },
   "browser": {
     "hawk": "./node_modules/hawk/lib/browser.js"

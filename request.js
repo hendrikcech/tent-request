@@ -422,6 +422,26 @@ postSetter.prototype.mentions = function(arg) {
 	if(!Array.isArray(arg)) arg = [arg]
 
 	arg.forEach(function(mention) {
+		var entity = ''
+		var id = ''
+
+		if(typeof mention === 'string') {
+			mention = mention.split(' ')
+			if(mention.length > 1) { // ('entity id')
+				entity = mention[0]
+				id = mention[1]
+			} else { //('entity' || 'id')
+				var p = urlMod.parse(mention[0])
+				if(p.protocol === 'https:' || p.protocol === 'http:') //entity
+					entity = mention[0]
+				else//id
+					id = mention[0]
+			}
+
+			mention = {}
+			if(entity) mention.entity = entity
+			if(id) mention.post = id
+		}
 		this.post.mentions.push(mention)
 	}.bind(this))
 	return this.stream

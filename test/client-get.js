@@ -1,114 +1,65 @@
-var vows = require('vows')
-var assert = require('assert')
-var request = require('../request')
+var test = require('tape')
+
+var request = require('..')
 var config = require('./config.json')
 
-var meta = config.meta
-var entity = meta.entity
-var rndPost = config.rndPost
-var fn = new Function()
+var client = request.createClient(config.meta, config.auth)
 
-vows.describe('get()').addBatch({
-	'': {
-		topic: function() {
-			var client = request.createClient(meta)
-			return client
-		},
-		'constructor': {
-			'id': testConstructor(['id'], ['id', entity, false]),
-			'id, entity': testConstructor(['id', 'entity'],
-				['id', 'entity', false]),
-			'id, cb': testConstructor(['id', fn],
-				['id', entity, fn]),
-			'id, entity, cb': testConstructor(['id', 'entity', fn],
-				['id', 'entity', fn])
-		},
-		'send()': {
-			'vanilla': assertResponse(
-				function(client) {
-					client.get(rndPost, entity, this.callback)
-				}, ['valid body', function(err, res, body) {
-					assert.include(body.post, 'content')
-				}]
-			),
-			'count': assertResponse(
-				function(client) {
-					client.get(rndPost, entity, this.callback).mentions().count()
-				}, ['count in body', function(err, res, count) {
-					assert.isNumber(count)
-				}]
-			)
-		},
-		'setters': { // [acceptHeader, method, version]
-			'mentions()':
-				testSetter(null, ['application/vnd.tent.post-mentions.v0+json',
-					'GET', false]),
-			'versions()':
-				testSetter(null, ['application/vnd.tent.post-versions.v0+json',
-					'GET', false]),
-			'childVersions() without version':
-				testSetter(null, ['application/vnd.tent.post-children.v0+json',
-					'GET', false]),
-			'childVersions() with version':
-				testSetter('asdffdas', ['application/vnd.tent.post-children.v0+json',
-					'GET', 'asdffdas']),
-			'count()':
-				testSetter(null, ['application/vnd.tent.post.v0+json', 'HEAD', false])
-		}
-	}
-}).export(module)
+test('get() constructor', function(t) {
+	var id = client.get('id').destroy()
+	t.equal(id.base.id, 'id', 'only id required')
+	t.equal(id.base.entity, config.meta.entity)
+	t.notOk(id.base.callback)
 
-function testConstructor(args, expected) {
-	var context = {
-		topic: function(client) {
-			var query = client.get.apply(client, args)
-			return [
-				query.base.id,
-				query.base.entity,
-				query.base.callback
-			]
-		},
-		valid: function(res) {
-			assert.deepEqual(res, expected)
-		}
-	}
+	var idEntity = client.get('id', 'entity').destroy()
+	t.equal(idEntity.base.id, 'id', 'id and entity')
+	t.equal(idEntity.base.entity, 'entity')
+	t.notOk(idEntity.base.callback)
 
-	return context
-}
+	var idCb = client.get('id', new Function).destroy()
+	t.equal(idCb.base.id, 'id', 'id and callback')
+	t.equal(idCb.base.entity, config.meta.entity)
+	t.ok(idCb.base.callback)
 
-function testSetter(arg, expected) {
-	var context = {
-		topic: function(client) {
-			var split = this.context.name.split(/ +/) // ['published_at()', 'comment']
-			var command = split[0] // 'published_at()'
-			command = command.slice(0, -2)	// 'published_at'
+	var idEntityCb = client.get('id', 'entity', new Function).destroy()
+	t.equal(idEntityCb.base.id, 'id', 'id, entity and callback')
+	t.equal(idEntityCb.base.entity, 'entity')
+	t.ok(idEntityCb.base.callback)
 
-			var post = client.get('http://enti.ty', 'postID')
+	t.end()
+})
 
-			post[command](arg)
-			return post.print()
-		}
-	}
-	context['valid'] = function(post) {
-		assert.deepEqual(post, expected)
-	}
+test('client.mentions .versions .childVersions', function(t) {
+	[
+		{ key: 'mentions',
+			header: 'application/vnd.tent.post-mentions.v0+json' },
+		{ key: 'versions',
+			header: 'application/vnd.tent.post-versions.v0+json' },
+		{ key: 'childVersions',
+			header: 'application/vnd.tent.post-children.v0+json' }
+	].forEach(function(fn) {
+		var get = client.get('id')[fn.key]().destroy()
+		t.equal(get.base.acceptHeader, fn.header,
+			'set accept header for .' + fn.key)
+	})
 
-	return context
-}
+	var cV = client.get('id').childVersions('version').destroy()
+	t.equal(cV.base.version, 'version', 'set version on .childVersions')
 
-function assertResponse(topicFn) {
-	var context = {
-		topic: topicFn,
-		'no error': function(err, res, body) {
-			assert.isNull(err)
-			assert.isUndefined(body.error)
-			assert.equal(res.statusCode, 200)
-		}
-	}
-	if(arguments.length === 1) return context
+	cV.childVersions('new Version!')
+	t.equal(cV.base.version, 'new Version!', 'replace version')
 
-	for(var i = 1; i<arguments.length; i++) {
-		context[arguments[i][0]] = arguments[i][1]
-	}
-	return context
-}
+	t.end()
+})
+
+
+test('client.count .delete', function(t) {
+	[ 
+		{ key: 'count', method: 'HEAD' },
+		{ key: 'delete', method: 'DELETE' }
+	].forEach(function(fn) {
+		var req = client.get('id')[fn.key]().destroy()
+		t.equal(req.base.method, fn.method, '.' + fn.key + ' works')
+	})
+	t.end()
+})

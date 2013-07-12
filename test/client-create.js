@@ -1,81 +1,37 @@
-var vows = require('vows')
-var assert = require('assert')
-var request = require('../request')
-var meta = require('./config.json').meta
-var auth = require('./config.json').auth
+var test = require('tape')
 
-vows.describe('create()').addBatch({
-	'': {
-		topic: function() {
-			var client = request.createClient(meta)
-			return client
-		},
-		'create()': {
-			'without auth': assertResponse(function(client) {
-				var app = {
-					"name": "MAAAA Example App",
-					"url": "https://app.blablabla.com",
-					"redirect_uri": "https://app.blablabla.com/oauth"
-				}
-				var post = client.create('https://tent.io/types/app/v0#', this.callback)
-					.content(app)
-					.permissions(false)
-			}),
-			'with auth': assertResponse(function() {
-				var client = request.createClient(meta, auth)
-				var post = client.create('https://tent.io/types/status/v0#', this.callback)
-					.content({ text: 'request test post' })
-			})
-		},
-		'setters': {
-			'publishedAt()': testSetter(123456789, { published_at: 123456789 }),
-			'mentions() single': testSetter('http://ment.ion', { mentions: ['http://ment.ion'] }),
-			'mentions() multiple': testSetter(['http://ment1.ion', 'ment2.ion'], { mentions: ['http://ment1.ion', 'ment2.ion'] }),
-			'licenses() single': testSetter('http://licen.se', { licenses: [{ url: 'http://licen.se' }]}),
-			'licenses() multiple': testSetter(['http://licen1.se', 'http://licen2.se'], { licenses: [{ url: 'http://licen1.se' }, { url: 'http://licen2.se'}]}),
-			'type()': testSetter('https://ty.pe', { type: 'https://ty.pe' }),
-			'content()': testSetter({ name: 'hi', 'who': { are: 'you?' }}, { content: { name: 'hi', 'who': { are: 'you?' }}}),
-			'permissions() boolean': testSetter(false, { type: 'http://post.type', permissions: { public: false } }),
-			'permissions() single entity': testSetter('https://enti.ty', { permissions: { public: false, entities: ['https://enti.ty'] }}),
-			'permissions() single group': testSetter('groupID', { permissions: { public: false, groups: [{ post: 'groupID' }] }}),
-			'permissions() multiple mixed': testSetter(['https://enti.ty', 'groupID', 'http://enti.ty'], {permissions: { public: false, entities: [ 'https://enti.ty', 'http://enti.ty' ], groups: [{ post: 'groupID' }] }})
-		}
-	}
-}).export(module)
+var request = require('..')
+var config = require('./config.json')
 
-function testSetter(arg, expected) {
-	var context = {
-		topic: function(client) {
-			var split = this.context.name.split(/ +/) // ['published_at()', 'comment']
-			var command = split[0] // 'published_at()'
-			command = command.slice(0, -2)	// 'published_at'
+var client = request.createClient(config.meta, config.auth)
 
-			var post = client.create('http://post.type')
-			post[command](arg)
-			return post.print()
-		}
-	}
-	context['valid'] = function(post) {
-		expected.type = expected.type || 'http://post.type'
-		assert.deepEqual(post, expected)
-	}
+test('create() constructur', function(t) {
+	var noArgs = client.create().destroy()
+	t.pass('no args required')
 
-	return context
-}
+	var type = client.create('http://ty.pe').destroy()
+	t.equal(type.base.post.type, 'http://ty.pe', 'only type required')
 
-function assertResponse(topicFn) {
-	return  {
-		topic: topicFn,
-		'no error': function(err, res, body) {
-			assert.isNull(err)
-			assert.isUndefined(body.error)
-			assert.equal(res.statusCode, 200)
-		},
-		'valid response object': function(err, res, body) {
-			assert.include(res, 'statusCode')
-		},
-		'valid body': function(err, res, body) {
-			assert.include(body.post, 'content')
-		}
-	}
-}
+	var post = { type: 'https://ty.pe', content: { hi: 'you' }}
+	var wholePost = client.create(post).destroy()
+	t.equal(wholePost.base.post, post, 'wholePost as first arg')
+
+	var cb = client.create(new Function).destroy()
+	t.ok(cb.base.callback, 'cb as first arg')
+
+	var twoArgs = client.create('https://ty.pe', new Function).destroy()
+	t.equal(twoArgs.base.post.type, 'https://ty.pe', 'type set right')
+	t.ok(twoArgs.base.callback, 'cb set right')
+
+	t.end()
+})
+
+test('create.publishedAt', function(t) {
+	var pubAt = client.create().publishedAt(123456789).destroy()
+	t.equal(pubAt.base.post.published_at, 123456789, 'value set')
+
+	pubAt.publishedAt(987654321)
+	t.equal(pubAt.base.post.published_at, 987654321, 'value overwritten')
+
+	t.end()
+})
