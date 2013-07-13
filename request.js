@@ -81,6 +81,9 @@ Client.prototype.delete = function(id, callback) {
 		id, callback)
 }
 
+/**********
+ * CREATE *
+ *********/
 
 function Create(urls, auth, type, callback) {
 	this.urls = urls
@@ -133,6 +136,10 @@ Create.prototype._send = function() {
 
 	return req
 }
+
+/*********
+ * QUERY *
+ ********/
 
 function Query(urls, auth, callback) {
 	this.urls = urls
@@ -230,6 +237,9 @@ Query.prototype.print = function() {
 	return this.query
 }
 
+/*******
+ * GET *
+ ******/
 
 function Get(urls, auth, clientEntity, id, entity, callback) {
 	this.urls = urls
@@ -237,21 +247,21 @@ function Get(urls, auth, clientEntity, id, entity, callback) {
 
 	if(!id) throw new Error('post id required')
 
-	//.get(id, entity[, cb])
-	this.id = id
-	this.entity = entity
-	this.callback = callback || false
-
 	if(!entity && !callback) { //.get(id)
 		this.id = id
 		this.entity = clientEntity
 	}
-	if(typeof entity === 'function') { //.get(id, cb)
+    else if(typeof entity === 'function') { //.get(id, cb)
 		this.id = id
 		this.entity = clientEntity
 		this.callback = entity
 	}
-
+    else {
+        //.get(id, entity[, cb])
+        this.id = id
+        this.entity = entity
+        this.callback = callback || false
+    }
 
 	this.acceptHeader = 'application/vnd.tent.post.v0+json'
 	this.method = 'GET'
@@ -310,6 +320,10 @@ Get.prototype._send = function() {
 
 	return req
 }
+
+/**********
+ * UPDATE *
+ *********/
 
 function Update(urls, auth, entity, id, parents, callback) {
 	this.urls = urls
@@ -382,6 +396,10 @@ Update.prototype._send = function() {
 	return req
 }
 
+/***********
+ * DESTROY *
+ **********/
+
 function Destroy(urls, auth, entity, id, callback) { //aka delete
 	this.urls = urls
 	this.auth = auth
@@ -423,9 +441,14 @@ Destroy.prototype._send = function() {
 
 	finishReq(req, this)
 
-	//console.log(req.request)
 	return req
 }
+
+/***************
+ * POST SETTER *
+ ***************
+ This factors out the methods of Create and Update queries.
+*/
 
 function postSetter() {}
 postSetter.prototype.mentions = function(arg) {
@@ -535,6 +558,9 @@ postSetter.prototype.refs = function() {
 	console.log('TODO')
 }
 
+/*********
+ * UTILS *
+ ********/
 
 // https://github.com/substack/hyperquest/blob/master/index.js <3
 function bind(obj, fn) {
