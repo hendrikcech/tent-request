@@ -46,7 +46,7 @@ test('query.types .entities', function(t) {
 		var arr = client.query()
 			[key](['http://argu.ment', 'https://another.one']).destroy()
 		t.deepEqual(arr.base.query[key], 'http://argu.ment,https://another.one',
-			'.' + key + ' set mulitple')
+			'.' + key + ' set multiple')
 
 		arr[key]('http://moaaaaa.rr')
 		t.deepEqual(arr.base.query[key],
