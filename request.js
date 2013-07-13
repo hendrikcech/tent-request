@@ -54,24 +54,30 @@ var Client = function(meta, auth) {
 		key: auth.key || auth.hawk_key,
 		algorithm: auth.algorithm || auth.hawk_algorithm
 	}
+
+    this.preferredServer = this.meta.servers.sort(function(a,b) {
+        if (a.preference < b.preference) return -1
+        else if (a.preference == b.preference) return 0
+        else return 1
+    })[0]
 }
 Client.prototype.create = function(type, callback) {
 	//if(!this.auth) 
-	return new Create(this.meta.servers[0].urls, this.auth, type, callback)
+	return new Create(this.preferredServer.urls, this.auth, type, callback)
 }
 Client.prototype.query = function(callback) {
-	return new Query(this.meta.servers[0].urls, this.auth, callback)
+	return new Query(this.preferredServer.urls, this.auth, callback)
 }
 Client.prototype.get = function(id, entity, callback) {
-	return new Get(this.meta.servers[0].urls, this.auth,
+	return new Get(this.preferredServer.urls, this.auth,
 		this.meta.entity, id, entity, callback)
 }
 Client.prototype.update = function(id, parent, callback) {
-	return new Update(this.meta.servers[0].urls, this.auth,
+	return new Update(this.preferredServer.urls, this.auth,
 		this.meta.entity, id, parent, callback)
 }
 Client.prototype.delete = function(id, callback) {
-	return new Destroy(this.meta.servers[0].urls, this.auth, this.meta.entity,
+	return new Destroy(this.preferredServer.urls, this.auth, this.meta.entity,
 		id, callback)
 }
 
