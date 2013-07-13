@@ -7,9 +7,18 @@ var urlParser = require('uri-template')
 var through = require('through')
 var util = require('util')
 
+/*******************
+ * CLIENT CREATION *
+ * ****************/
+
 exports.createClient = function(meta, auth) {
-	if(!meta) throw new Error('meta post required')
-	return new Client(meta, auth)
+    if(!meta) throw new Error('meta post required')
+    // Allow users to provide the meta post as returned by tent-auth, or the meta post content
+    if(meta.post) meta = meta.post;
+    if(meta.content) meta = meta.content;
+    // Check at least for servers and entity
+    if(!meta.servers || !meta.entity) throw new Error('meta post needs at least a list of servers and an entity')
+    return new Client(meta, auth)
 }
 
 var Client = function(meta, auth) {

@@ -4,6 +4,15 @@ var request = require('..')
 var config = require('./config.json')
 
 test('client() constructor', function(t) {
+
+    var metaPost = {
+        post: {
+            content: config.meta
+        }
+    };
+    var clientMetaPost = request.createClient(metaPost);
+    t.deepEqual(clientMetaPost.meta, config.meta, 'meta set')
+
 	var meta = request.createClient(config.meta)
 	t.deepEqual(meta.meta, config.meta, 'meta set')
 	t.notOk(meta.auth, 'no auth set')
