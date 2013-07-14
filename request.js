@@ -176,6 +176,11 @@ Query.prototype.limit = function(limit) {
 	this.query.limit = arguments[arguments.length-1]
 	return this.stream
 }
+Query.prototype.maxRefs = function(maxRefs) {
+	if(this._sent) throw new Error('request already sent')
+	this.query.max_refs = arguments[arguments.length-1]
+	return this.stream
+}
 Query.prototype.sortBy = function(sorting) {
 	if(this._sent) throw new Error('request already sent')
 	this.query.sort_by = arguments[arguments.length-1]
