@@ -15,7 +15,7 @@ test('query() constructor', function(t) {
 	t.end()
 })
 
-test('query.limit .since .until .before .sortBy', function(t) {
+test('query.limit .since .until .before', function(t) {
 	['limit', 'since', 'until', 'before'].forEach(function(key) {
 		var q = client.query()[key]('param').destroy()
 
@@ -26,13 +26,29 @@ test('query.limit .since .until .before .sortBy', function(t) {
 			'repeated call of .' + key + ' overwrites value')
 	})
 
+	t.end()
+})
+
+test('query.sortBy', function(t) {
 	var sortBy = client.query().sortBy('param').destroy()
 
 	t.deepEqual(sortBy.base.query.sort_by, 'param', '.sortBy arg set')
 
-	sortBy.sortBy('nuuuu')
-	t.deepEqual(sortBy.base.query.sort_by, 'nuuuu',
+	sortBy.sortBy('published_at')
+	t.deepEqual(sortBy.base.query.sort_by, 'published_at',
 		'repeated call of .sortBy overwrites value')
+
+	t.end()
+})
+
+test('query.maxRefs', function(t) {
+	var maxRefs = client.query().maxRefs(5).destroy()
+
+	t.deepEqual(maxRefs.base.query.max_refs, 5, '.maxRefs arg set')
+
+	maxRefs.maxRefs(10)
+	t.deepEqual(maxRefs.base.query.max_refs, 10,
+		'repeated call of .maxRefs overwrites value')
 
 	t.end()
 })
