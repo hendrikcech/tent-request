@@ -12,13 +12,13 @@ var util = require('util')
  * ****************/
 
 exports.createClient = function(meta, auth) {
-    if(!meta) throw new Error('meta post required')
-    // Allow users to provide the meta post as returned by tent-auth, or the meta post content
-    if(meta.post) meta = meta.post;
-    if(meta.content) meta = meta.content;
-    // Check at least for servers and entity
-    if(!meta.servers || !meta.entity) throw new Error('meta post needs at least a list of servers and an entity')
-    return new Client(meta, auth)
+	if(!meta) throw new Error('meta post required')
+	// Allow users to provide the meta post as returned by tent-auth, or the meta post content
+	if(meta.post) meta = meta.post;
+	if(meta.content) meta = meta.content;
+	// Check at least for servers and entity
+	if(!meta.servers || !meta.entity) throw new Error('meta post needs at least a list of servers and an entity')
+	return new Client(meta, auth)
 }
 
 var Client = function(meta, auth) {
@@ -55,11 +55,11 @@ var Client = function(meta, auth) {
 		algorithm: auth.algorithm || auth.hawk_algorithm
 	}
 
-    this.preferredServer = this.meta.servers.sort(function(a,b) {
-        if (a.preference < b.preference) return -1
-        else if (a.preference == b.preference) return 0
-        else return 1
-    })[0]
+	this.preferredServer = this.meta.servers.sort(function(a,b) {
+		if (a.preference < b.preference) return -1
+		else if (a.preference == b.preference) return 0
+		else return 1
+	})[0]
 }
 Client.prototype.create = function(type, callback) {
 	//if(!this.auth) 
@@ -256,17 +256,17 @@ function Get(urls, auth, clientEntity, id, entity, callback) {
 		this.id = id
 		this.entity = clientEntity
 	}
-    else if(typeof entity === 'function') { //.get(id, cb)
+	else if(typeof entity === 'function') { //.get(id, cb)
 		this.id = id
 		this.entity = clientEntity
 		this.callback = entity
 	}
-    else {
-        //.get(id, entity[, cb])
-        this.id = id
-        this.entity = entity
-        this.callback = callback || false
-    }
+	else {
+		//.get(id, entity[, cb])
+		this.id = id
+		this.entity = entity
+		this.callback = callback || false
+	}
 
 	this.acceptHeader = 'application/vnd.tent.post.v0+json'
 	this.method = 'GET'
