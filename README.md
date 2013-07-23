@@ -142,9 +142,11 @@ To set the post public status and permit some entities access, call the permissi
 ### .update
 This function creates new versions of posts.
 The first argument is required and takes the id of the post to update.
-After that you can pass either the version hash of a parent version or a full parent object, consisting of at least a `version` key and optionally `post` and `entity` keys.
 
-	client.update(id[, parentHashString || fullParentObject][, callback])
+A second argument is required, which is a reference to the parent post. You can pass either the version id of a parent version
+or a full parent object, consisting of at least a `version` key and optionally `post` and `entity` keys.
+
+	client.update(id, parentHashString || fullParentObject[, callback])
 
 Parents can be also set in the same form with a dedicated function.
 
