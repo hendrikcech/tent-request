@@ -53,13 +53,9 @@ test('client.mentions .versions .childVersions', function(t) {
 })
 
 
-test('client.count .delete', function(t) {
-	[ 
-		{ key: 'count', method: 'HEAD' },
-		{ key: 'delete', method: 'DELETE' }
-	].forEach(function(fn) {
-		var req = client.get('id')[fn.key]().destroy()
-		t.equal(req.base.method, fn.method, '.' + fn.key + ' works')
-	})
+test('client..delete', function(t) {
+	var req = client.get('id').count().destroy()
+	t.equal(req.base.method, 'HEAD', '.count works')
+
 	t.end()
 })

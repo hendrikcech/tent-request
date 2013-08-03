@@ -115,9 +115,6 @@ Create.prototype.attachments = function() {
 	console.log('TODO')
 }
 
-Create.prototype.print = function() {
-	return this.post
-}
 
 Create.prototype._send = function() {
 	if(!this.post.type) {
@@ -238,9 +235,6 @@ Query.prototype.count = function() {
 	this.method = 'HEAD'
 	return this.stream
 }
-Query.prototype.print = function() {
-	return this.query
-}
 
 /*******
  * GET *
@@ -299,19 +293,7 @@ Get.prototype.count = function() {
 	this.method = 'HEAD'
 	return this.stream
 }
-Get.prototype.delete = function() {
-	if(this._sent) throw new Error('request already sent')
-	this.method = 'DELETE'
-	return this.stream
-}
 
-Get.prototype.print = function() {
-	return [
-		this.acceptHeader,
-		this.method,
-		this.version
-	]
-}
 
 Get.prototype._send = function() {
 	var tpl = urlParser.parse(this.urls.post)
