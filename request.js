@@ -613,6 +613,13 @@ function setupStream(stream, that) {
 			stream[key] = bind(that, that[key])
 	}
 
+	// an http error is thrown two times: from this stream and from the actual
+	// request stream. errors are catched in `finishReq`. to prevent node from
+	// crashing the process a listener is attached here too.
+	if(that.callback) {
+		stream.on('error', function(err) {})
+	}
+
 	stream['base'] = that
 
 	var closed = false
@@ -644,13 +651,17 @@ function finishReq(req, that) {
 
 	if(!that.callback) return req //breakpoint
 
+	var cb = that.callback
 	var response
 	req.on('response', function (res) {
 		response = res
 		//res.setEncoding('utf8')
 	})
-	
-	var cb = that.callback
+
+	req.on('error', function(err) {
+		cb(err)
+	})
+
 	req.pipe(concat(function(err, body) {
 		if(err) return cb(err)
 
