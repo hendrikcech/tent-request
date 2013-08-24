@@ -6,11 +6,29 @@ var config = require('./config.json')
 var client = request.createClient(config.meta, config.auth)
 
 test('query() constructor', function(t) {
+	var optsObj = { count: true }
+
 	client.query().destroy()
 	t.pass('no arguments required')
 
-	var cb = client.query(new Function).destroy()
-	t.ok(cb.base.callback, 'accepts callback')
+	t.test('only opts', function(st) {
+		var opts = client.query(optsObj).destroy()
+		st.equal(opts.base.opts, optsObj)
+		st.end()
+	})
+
+	t.test('only callback', function(st) {
+		var cb = client.query(new Function).destroy()
+		st.equal(typeof cb.base.callback, 'function')
+		st.end()
+	})
+
+	t.test('opts and callback', function(st) {
+		var optsCb = client.query(optsObj, new Function).destroy()
+		st.equal(optsCb.base.opts, optsObj)
+		st.equal(typeof optsCb.base.callback, 'function')
+		st.end()
+	})
 
 	t.end()
 })
@@ -37,18 +55,6 @@ test('query.sortBy', function(t) {
 	sortBy.sortBy('published_at')
 	t.deepEqual(sortBy.base.query.sort_by, 'published_at',
 		'repeated call of .sortBy overwrites value')
-
-	t.end()
-})
-
-test('query.maxRefs', function(t) {
-	var maxRefs = client.query().maxRefs(5).destroy()
-
-	t.deepEqual(maxRefs.base.query.max_refs, 5, '.maxRefs arg set')
-
-	maxRefs.maxRefs(10)
-	t.deepEqual(maxRefs.base.query.max_refs, 10,
-		'repeated call of .maxRefs overwrites value')
 
 	t.end()
 })
@@ -97,8 +103,34 @@ test('query.mentions', function(t) {
 	t.end()
 })
 
-test('query.count', function(t) {
-	var count = client.query().count().destroy()
+test('query.count (sub function)', function(t) {
+	var count = client.query.count().destroy()
 	t.equal(count.base.method, 'HEAD', 'works')
+	t.end()
+})
+
+test('query: profiles', function(t) {
+	var str = client.query({ profiles: 'entity' }).destroy()
+	t.equal(str.base.query.profiles, 'entity', 'string')
+
+	var arr = client.query({ profiles: ['refs', 'mentions']}).destroy()
+	t.equal(arr.base.query.profiles, 'refs,mentions', 'array')
+
+	var allStr = client.query({ profiles: 'all' }).destroy()
+	t.equal(allStr.base.query.profiles,
+		'entity,refs,mentions,permissions,parents', "'all' value as string")
+
+	var allArr = client.query({ profiles: ['all'] }).destroy()
+	t.equal(allArr.base.query.profiles,
+		'entity,refs,mentions,permissions,parents', "'all' value as string")
+
+	t.end()
+})
+
+test('query: maxRefs', function(t) {
+	var maxRefs = client.query({ maxRefs: 5 }).destroy()
+
+	t.deepEqual(maxRefs.base.query.max_refs, 5, '.maxRefs arg set')
+
 	t.end()
 })

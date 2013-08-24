@@ -61,14 +61,27 @@ var Client = function(meta, auth) {
 		else return 1
 	})[0]
 
+	this.query = this.query()
 	this.get = this.get()
 }
 Client.prototype.create = function(type, callback) {
 	//if(!this.auth) 
 	return new Create(this.preferredServer.urls, this.auth, type, callback)
 }
-Client.prototype.query = function(callback) {
-	return new Query(this.preferredServer.urls, this.auth, callback)
+Client.prototype.query = function(opts, callback) {
+	var client = this
+
+	var query = getQuery([])
+	query.count = getQuery(['count'])
+
+	function getQuery(mode) {
+		return function(opts, callback) {
+			return new Query(client.preferredServer.urls, client.auth, mode,
+				opts, callback)
+		}
+	}
+
+	return query
 }
 Client.prototype.get = function() {
 	var client = this
@@ -133,7 +146,6 @@ Create.prototype.attachments = function() {
 	console.log('TODO')
 }
 
-
 Create.prototype._send = function() {
 	if(!this.post.type) {
 		var message = 'no post type defined'
@@ -156,13 +168,27 @@ Create.prototype._send = function() {
  * QUERY *
  ********/
 
-function Query(urls, auth, callback) {
+function Query(urls, auth, mode, opts, callback) {
 	this.urls = urls
 	this.auth = auth
+	this.opts = opts || {}
 	this.callback = callback || false
 	
+	if(typeof opts === 'function') {
+		this.callback = opts
+		this.opts = {}
+	}
+
 	this.query = {}
 	this.method = 'GET'
+
+	if(mode[0] === 'count')
+		this.method = 'HEAD'
+
+	if(this.opts.profiles)
+		setProfiles(this.opts.profiles, this)
+	if(this.opts.maxRefs)
+		this.query.max_refs = this.opts.maxRefs
 
 	this.stream = through()
 	setupStream(this.stream, this)
@@ -189,11 +215,6 @@ Query.prototype._send = function() {
 Query.prototype.limit = function(limit) {
 	if(this._sent) throw new Error('request already sent')
 	this.query.limit = arguments[arguments.length-1]
-	return this.stream
-}
-Query.prototype.maxRefs = function(maxRefs) {
-	if(this._sent) throw new Error('request already sent')
-	this.query.max_refs = arguments[arguments.length-1]
 	return this.stream
 }
 Query.prototype.sortBy = function(sorting) {
@@ -246,11 +267,6 @@ Query.prototype.mentions = function() {
 		else if(typeof arg === 'string') //OR operator
 			query.push(arg)
 	}
-	return this.stream
-}
-Query.prototype.count = function() {
-	if(this._sent) throw new Error('request already sent')
-	this.method = 'HEAD'
 	return this.stream
 }
 

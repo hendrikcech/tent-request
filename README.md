@@ -44,39 +44,36 @@ Regardless of the callback, all functions return a readable stream.
 	client.query().pipe(process.stdout)
 
 ### .query
-This method communicates with the `posts_feed` server endpoint and can be used to filter posts by certain criteria. More information can be found [here](https://tent.io/docs/api#postsfeed). The parameters can be chained in any order.
+This method communicates with the `posts_feed` server endpoint and can be used to filter posts by certain criteria. More information can be found [here](https://tent.io/docs/api#postsfeed).
+
+	client.query([opts][, callback])
+
+**Opts Object**
+
+key | description | example
+--- | --- | ---
+profiles | Set to one or more of these values to get the relevant profiles: `entity`, `refs`, `mentions`, `permissions`, `parents` or `all`. `all` is an shortcut and replaced by the other values. | `{ profiles: ['entity', 'mentions'] }` `{ profiles: 'all' }`
+maxRefs | Set the maximum number of included refs. | `{ maxRefs: 5 }`
+
+**Setter**  
+The posts can be filtered by the following parameters. The functions are chainable in any order.
 `||` seperates different possible parameters; read `OR`.
 
-	client.query([callback])
-		.limit(2) // limit the number of posts returned
-		.sortBy('received_at' || 'published_at'
-			|| 'version.received_at' || 'version.published_at') // set sorting
+function | description | example
+--- | --- | ---
+limit | Limit the number of posts returned. | `client.query.limit(2)`	
+sortBy | Specify by which field the posts should be sorted. Possible values are `received_at`, `published_at`, `version.received_at` and `version.published_at`. | `client.query.sortBy('received_at')`
+since | Return only posts since this point. Time in milliseconds since the Unix epoch. | `client.query.since(1373643809000)`
+until | Return only posts until this point. Time in milliseconds since the Unix epoch. | `client.query.until(1373643814000)`
+before | Return only posts before this point. Time in milliseconds since the Unix epoch. | `client.query.before(1373643909000)`
+types | Specify the types of the returned posts. | `client.query.types('http://ty.pe')` `client.query.types(['http://ty.pe', 'https://another.type'])`
+entities | Specify from which entities posts should be returned. | `client.query.entities('http://one.entity')` `client.query.entities(['https://or.more', 'http://than.one'])`
+mentions | Query by mentions. Supports AND and OR operators. Entities in one array are connected by AND operators, commata represent ORs. | `client.query.mentions(['http://enti.ty' + '+id',/*AND*/ 'https://enti.ty'], /*OR*/ 'http://pet.er')`
 
-		// milliseconds since the Unix epoch
-		.since(1373643809000) // return posts since this point
-		.until(1373643814000) // return posts until this point
-		.before(1373643909000) // return posts before this point
+**Count**  
+To get the number of matched posts, call the subfunction `count`. Be aware that the actual posts won't be returned.
 
-You can give these two functions either one parameters in form of a string or multiple as an array.
-
-		// only return post of these types
-		.types('http://ty.pe') // add one type
-		.types(['http://ty.pe', 'https://another.type']) // or multiple
-		
-		// only return published by these entities
-		.entities('http://one.entity') // one
-		.entities(['https://or.more', 'http://than.one']) // or multiple
-
-
-You can query for mentioned entities with AND and OR operators. Entities in one array are connected by AND operators, commata represent ORs.
-
-		// query for posts that mention these entities or posts
-		.mentions(['http://enti.ty' + '+id',/*AND*/ 'https://enti.ty'],
-			/*OR*/ 'http://pet.er')
-
-To get the count of matched posts, attach this function. Be aware, that the actual posts won't be returned!
-		
-		.count()
+	client.query.count([callback])
 
 ### .get
 Use this function to interact with a specific post from the [`post` server endpoint](https://tent.io/docs/api#post).
