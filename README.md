@@ -7,6 +7,8 @@ Please open an issue if you find an unsupported feature or a bug.
 
 Please generally don't hesitate to open a issue or contact me via email, Tent (hendrik.tent.is) or IRC, if you have questions or ideas.
 
+WARNING: The API is still very likely to change.
+
 ## install
 With npm:
 	
@@ -77,20 +79,32 @@ To get the count of matched posts, attach this function. Be aware, that the actu
 		.count()
 
 ### .get
-Use this function to get a specific post from the [`post` server endpoint](https://tent.io/docs/api#post).
-`get()` requires the `id` of the post to fetch. If no entity is passed as the second parameter, the function will try to get a post with the given id from  the current entity.
+Use this function to interact with a specific post from the [`post` server endpoint](https://tent.io/docs/api#post).
+`get()` requires the `id` of the post to fetch. If no entity is passed as the second parameter, the function will try to get a post with the given id from the current entity.
 	
-	client.get(id[, entity][, callback])
+	client.get(id[, entity][, opts][, callback])
 
-Only one or none of the following functions can be used per request.
+**Opts Object**
 
-		.mentions() // get posts mentioning the requested post
-		.versions() // get all versions of the requested post
-		.childVersions() // get all versions to which this post is the parent
+key | description | example
+--- | --- | ---
+version | Set to interact with a specific version. By default the latest version will be picked. | `{ version: 'aB8mjnxlIeJ8n2tP5ztp'}`
+profiles | Set to one or more of these values to get the relevant profiles: `entity`, `refs`, `mentions`, `permissions`, `parents` or `all`. `all` is an shortcut and replaced by the other values. | `{ profiles: ['entity', 'mentions'] }` `{ profiles: 'all' }`
 
-To get the count of matched posts, chain .count().
+**sub functions**  
+These subfunctions take the same arguments as the base function.
 
-		.count()
+function | description
+--- | ---
+client.get.mentions() | Get all posts that are mentioning the post with the given `id`.
+client.get.versions() | Get all versions of the post with the given `id`.
+client.get.childVersions() | Get all versions to which the post with the given `id` is the parent.
+
+To get the count of matched posts, use .count().
+
+	client.get.count('id')
+	client.get.mentions.count('id')
+	...
 
 ### .create
 Use this function to create a new post. Optionally the constructor takes the `type` (e.g. `https://tent.io/types/status/v0`) or the whole post. Information about the post schema can be found [here](https://tent.io/docs/posts#post-schema).
