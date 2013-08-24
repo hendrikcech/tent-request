@@ -1,15 +1,12 @@
 var request = require('../request')
-var meta = require('../test/config.json').meta
-var auth = require('../test/config.json').auth
+var config = require('../test/config.json')
 
-var client = request.createClient(meta, auth)
-var post = client.get('JumBJkaEJO6cXA90g8mumg', cb)
-	//.childVersions('5e0ada8f0602e')
-	//.count()
+var client = request.createClient(config.meta, config.auth)
+var post = client.get.mentions.count('AB8mjnxlIeJ8n2tP5ztp-w', cb)
 
 function cb(err, res, body) {
 	if(err) return console.error(err)
 	console.log(res.statusCode)
-	console.log(body)
+	console.log(require('util').inspect(body, { depth: 10, colors: true }))
 }
 //post.pipe(process.stdout)

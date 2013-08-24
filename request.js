@@ -60,6 +60,8 @@ var Client = function(meta, auth) {
 		else if (a.preference == b.preference) return 0
 		else return 1
 	})[0]
+
+	this.get = this.get()
 }
 Client.prototype.create = function(type, callback) {
 	//if(!this.auth) 
@@ -68,9 +70,25 @@ Client.prototype.create = function(type, callback) {
 Client.prototype.query = function(callback) {
 	return new Query(this.preferredServer.urls, this.auth, callback)
 }
-Client.prototype.get = function(id, entity, callback) {
-	return new Get(this.preferredServer.urls, this.auth,
-		this.meta.entity, id, entity, callback)
+Client.prototype.get = function() {
+	var client = this
+
+	var get = getGet([])
+	get.mentions = getGet(['mentions'])
+	get.mentions.count = getGet(['mentions', 'count'])
+	get.versions = getGet(['versions'])
+	get.versions.count = getGet(['versions', 'count'])
+	get.childVersions = getGet(['childVersions'])
+	get.childVersions.count = getGet(['childVersions', 'count'])
+
+	function getGet(mode) {
+		return function(id, entity, opts, callback) {
+			return new Get(client.preferredServer.urls, client.auth,
+				client.meta.entity, mode, id, entity, opts, callback)
+		}
+	}
+
+	return get
 }
 Client.prototype.update = function(id, parent, callback) {
 	return new Update(this.preferredServer.urls, this.auth,
@@ -240,31 +258,55 @@ Query.prototype.count = function() {
  * GET *
  ******/
 
-function Get(urls, auth, clientEntity, id, entity, callback) {
+function Get(urls, auth, clientEntity, mode, id, entity, opts, callback) {
 	this.urls = urls
 	this.auth = auth
 
-	if(!id) throw new Error('post id required')
+	// handle and match arguments
+	this.id = id
+	this.entity = clientEntity
+	this.opts = {}
+	this.callback = callback || false
 
-	if(!entity && !callback) { //.get(id)
-		this.id = id
-		this.entity = clientEntity
-	}
-	else if(typeof entity === 'function') { //.get(id, cb)
-		this.id = id
-		this.entity = clientEntity
-		this.callback = entity
-	}
-	else {
-		//.get(id, entity[, cb])
-		this.id = id
+	if(!id || !(typeof id !== 'string' || typeof id !== 'number'))
+		throw new Error('post id required')
+
+	if(typeof entity === 'string') //id, entity
 		this.entity = entity
-		this.callback = callback || false
-	}
+	else if(typeof entity === 'object') //id, opts
+		this.opts = entity
+	else if(typeof entity === 'function') //id, cb 
+		this.callback = entity
 
+	if(typeof opts === 'object') //id, entity, opts
+		this.opts = opts
+	else if(typeof opts === 'function') //id, entity, cb
+		this.callback = opts
+
+
+	// handle mode
+	// default: get post
 	this.acceptHeader = 'application/vnd.tent.post.v0+json'
 	this.method = 'GET'
-	this.version = false
+	this.query = {}
+
+	if(mode[0] === 'mentions')
+		this.acceptHeader = 'application/vnd.tent.post-mentions.v0+json'
+	else if(mode[0] === 'versions')
+		this.acceptHeader = 'application/vnd.tent.post-versions.v0+json'
+	else if(mode[0] === 'childVersions')
+		this.acceptHeader = 'application/vnd.tent.post-children.v0+json'
+	
+	if(mode[1] === 'count') {
+		this.method = 'HEAD'
+	}
+
+
+	// handle opts obj
+	if(this.opts.profiles)
+		setProfiles(this.opts.profiles, this)
+	if(this.opts.version)
+		this.query.version = this.opts.version
 
 	this.stream = through()
 	setupStream(this.stream, this)
@@ -272,33 +314,14 @@ function Get(urls, auth, clientEntity, id, entity, callback) {
 	return this.stream
 }
 
-Get.prototype.mentions = function() {
-	if(this._sent) throw new Error('request already sent')
-	this.acceptHeader = 'application/vnd.tent.post-mentions.v0+json'
-	return this.stream
-}
-Get.prototype.versions = function() {
-	if(this._sent) throw new Error('request already sent')
-	this.acceptHeader = 'application/vnd.tent.post-versions.v0+json'
-	return this.stream
-}
-Get.prototype.childVersions = function(version) {
-	if(this._sent) throw new Error('request already sent')
-	this.acceptHeader = 'application/vnd.tent.post-children.v0+json'
-	if(version) this.version = arguments[arguments.length - 1]
-	return this.stream
-}
-Get.prototype.count = function() {
-	if(this._sent) throw new Error('request already sent')
-	this.method = 'HEAD'
-	return this.stream
-}
-
-
 Get.prototype._send = function() {
 	var tpl = urlParser.parse(this.urls.post)
 	var url = tpl.expand({ entity: this.entity, post: this.id })
-	if(this.version) url += '?version=' + this.version
+	var param = qs.stringify(this.query)
+	param = param.replace(/%2C/g, ',')
+	param = param.replace(/%2B/g, '+')
+
+	if(param) url += '?' + param
 
 	var req = hyperquest(url, { method: this.method })
 	req.setHeader('Accept', this.acceptHeader)
@@ -548,6 +571,15 @@ postSetter.prototype.refs = function() {
 /*********
  * UTILS *
  ********/
+
+//used by .query and .get
+function setProfiles(profiles, that) {
+	if(!Array.isArray(profiles)) profiles = [profiles]
+	if(profiles[0] === 'all')
+		that.query.profiles = 'entity,refs,mentions,permissions,parents'
+	else
+		that.query.profiles = profiles.join()
+}
 
 // https://github.com/substack/hyperquest/blob/master/index.js <3
 function bind(obj, fn) {
