@@ -23,7 +23,7 @@
   },
   "license": "MIT",
   "dependencies": {
-    "hyperquest": "~0.1.5",
+    "hyperquest": "~0.1.8",
     "concat-stream": "~0.1.1",
     "hawk": "~0.15.0",
     "uri-template": "~0.3.3",

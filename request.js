@@ -645,8 +645,9 @@ function finishReq(req, that) {
 	that._sent = true
 
 	if(that.auth) {
-		var auth = hawk.client.header(req.request.uri, req.request.method, { credentials: that.auth })
-		req.request.headers.Authorization = auth.field //no clue why .setHeader() doesnt work
+		var auth = hawk.client.header(req.request.uri, req.request.method,
+			{ credentials: that.auth })
+		req.setHeader('Authorization', auth.field)
 	}
 
 	if(!that.callback) return req //breakpoint
@@ -655,7 +656,6 @@ function finishReq(req, that) {
 	var response
 	req.on('response', function (res) {
 		response = res
-		//res.setEncoding('utf8')
 	})
 
 	req.on('error', function(err) {
@@ -678,7 +678,4 @@ function finishReq(req, that) {
 
 		cb(err, response, body)
 	}))
-
-	if(that.method === 'HEAD')
-		req.end() //bug in hyperquest: returns duplex stream
 }
