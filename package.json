@@ -33,6 +33,6 @@
     "tape": "~1.0.4"
   },
   "browser": {
-    "hawk": "./node_modules/hawk/lib/browser.js"
+    "hawk": "hawk/lib/browser.js"
   }
 }
