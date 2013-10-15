@@ -1,7 +1,7 @@
 {
   "name": "tent-request",
   "description": "Performes requests against a Tent server",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "main": "request.js",
   "keywords": [
     "tent",
