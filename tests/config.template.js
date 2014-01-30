@@ -1,4 +1,8 @@
-{
+/*
+you can use tent-discover and tent-auth to obtain this information from
+your test tent server
+*/
+module.exports = {
 	"meta": {
 		"entity": "",
 		"servers": [{
@@ -24,3 +28,6 @@
 		"token_type": ""
 	}
 }
+
+// used by tests
+module.exports.type = 'https://custom.type/v0#'
