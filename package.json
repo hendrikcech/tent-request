@@ -2,7 +2,7 @@
   "name": "tent-request",
   "description": "Performes requests against a Tent server",
   "version": "0.3.1",
-  "main": "request.js",
+  "main": "index.js",
   "keywords": [
     "tent",
     "post",
@@ -14,8 +14,9 @@
     "url": "https://github.com/hendrikcech/tent-request.git"
   },
   "scripts": {
-    "pretest": "node ./test/checkConfig.js",
-    "test": "tape ./test/*.js"
+    "pretest": "node ./tests/configCheck.js",
+    "test": "tape ./tests/*/*.js",
+    "build": "browserify index.js -s request | uglifyjs > umd.min.js"
   },
   "author": {
     "name": "Hendrik Cech",
@@ -23,14 +24,12 @@
   },
   "license": "MIT",
   "dependencies": {
-    "hyperquest": "~0.1.8",
-    "concat-stream": "~0.1.1",
-    "hawk": "~0.15.0",
-    "uri-template": "~0.3.3",
-    "through": "~2.3.4"
+    "concat-stream": "~1.4.1",
+    "hawk": "~2.1.0",
+    "uri-template": "~0.4.1"
   },
   "devDependencies": {
-    "tape": "~1.0.4"
+    "tape": "~2.3.2"
   },
   "browser": {
     "hawk": "hawk/lib/browser.js"
