@@ -1,14 +1,11 @@
-var request = require('../request')
+var request = require('..')
 var config = require('../test/config.json')
 
-var client = request.createClient(config.meta, config.auth)
+var client = request(config.meta, config.auth)
 var req = client.delete('j3zIT8syGRRA8eO7p9Dm1w', cb)
-	//.version('732deac42a276d9edf5')
-	//.createDeletePost(false)
 
 function cb(err, res, body) {
 	if(err) return console.error(err)
 	console.log(res.statusCode)
 	console.log(body)
 }
-//req.pipe(process.stdout)

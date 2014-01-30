@@ -1,12 +1,11 @@
-var request = require('../request')
-var config = require('../test/config.json')
+var request = require('..')
+var config = require('../tests/config')
 
-var client = request.createClient(config.meta, config.auth)
-var post = client.get('AB8mjnxlIeJ8n2tP5ztp-w', cb)
+var client = request(config.meta, config.auth)
+var post = client.get('HccNVvs__rwa4dXe5DxeEw', cb)
 
 function cb(err, res, body) {
 	if(err) return console.error(err)
 	console.log(res.statusCode)
 	console.log(require('util').inspect(body, { depth: 10, colors: true }))
 }
-//post.pipe(process.stdout)

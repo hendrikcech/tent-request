@@ -1,13 +1,11 @@
-var request = require('../request')
-var config = require('../test/config.json')
+var request = require('..')
+var config = require('../tests/config')
 
-var client = request.createClient(config.meta, config.auth)
-var posts = client.query({ profiles: 'all', maxRefs: 5 }, cb)
-
+var client = request(config.meta, config.auth)
+var posts = client.query({ limit: 5, since: 1390968708016 }, cb)
 	
 function cb(err, res, body) {
 	if(err) return console.error(err)
 	console.log(res.statusCode)
 	console.log(require('util').inspect(body, { depth: 2, colors: true }))
 }
-//posts.pipe(process.stdout)
