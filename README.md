@@ -175,6 +175,19 @@ key | description | example
 version | Only delete a specific version. | `{ version: 'versionId' }`
 createDeletePost | Control if a [delete post](https://tent.io/docs/post-types#delete) should be created. Server default: true. | `{ createDeletePost: false }`
 
+### pagination
+All post lists support pagination. This includes the results of the `query`, `get.mentions`, `get.versions` and `get.childVersions` functions. The methods to retrieve these pages are bound to the context of the callback.
+There are `this.next`, `this.prev`, `this.first` and `this.last` functions, if the corresponding pages are available.
+
+	client.query(cb)
+
+	function cb(err, res, body) {
+		console.log(body)
+		if(this.next) this.next(cb)
+	}
+
+This code snippet would log all posts that are saved on a Tent server.
+
 # test
 Duplicate `tests/config.template.js`, rename the file to `config.json` and populate it. Then do
 

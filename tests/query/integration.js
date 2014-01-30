@@ -10,7 +10,7 @@ var ids = []
 test('setup', function(t) {
 	startTime = Date.now()
 
-	var num = 3
+	var num = 4
 	t.plan(num)
 	for(var i = 0; i < num; i++) {
 		client.create(config.type, function(err, res, body) {
@@ -48,6 +48,38 @@ test('query() .limit with profiles', function(t) {
 	function cb(err, res, body) {
 		t.error(err)
 		t.ok(body.profiles)
+	}
+})
+
+test('pagination', function(t) {
+	t.plan(3 * 3 + 2 + 2 + 1)
+
+	client.query({ limit: 2 }, cb)
+
+	var call = 1
+	var firstPost = ''
+
+	function cb(err, res, body) {
+		t.error(err, 'no error')
+		t.ok(res, 'response object')
+		t.equal(body.posts.length, 2, 'two posts returned')
+		
+		if(call === 1) {
+			t.ok(this.next, 'next function exists')
+			t.ok(body.posts[0].id, 'post returned')
+			
+			firstPost = body.posts[0].id
+			this.next(cb)
+			call++
+		} else if(call === 2) {
+			t.ok(this.prev, 'prev function exists')
+			t.ok(body.posts[0].id, 'post returned')
+
+			this.prev(cb)
+			call++
+		} else if(call === 3) {
+			t.equal(body.posts[0].id, firstPost, 'on first page again')
+		}
 	}
 })
 
