@@ -51,6 +51,17 @@ test('query() .limit with profiles', function(t) {
 	}
 })
 
+test('query.count() .since', function(t) {
+	t.plan(3)
+	client.query.count({ since: startTime }, cb)
+
+	function cb(err, res, body) {
+		t.error(err, 'no error')
+		t.equal(typeof body, 'number', 'body is a number')
+		t.equal(body, ids.length, 'correct count')
+	}
+})
+
 test('pagination', function(t) {
 	t.plan(3 * 3 + 2 + 2 + 1)
 
