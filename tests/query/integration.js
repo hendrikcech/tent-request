@@ -33,7 +33,9 @@ test('query() .limit', function(t) {
 
 test('query() .since', function(t) {
 	t.plan(2)
-	client.query({ since: startTime }, cb)
+	// try to even out potential time differences
+	// (I experienced those with cupcake)
+	client.query({ since: startTime - 10000 }, cb)
 
 	function cb(err, res, body) {
 		t.error(err, 'no error')
@@ -53,7 +55,7 @@ test('query() .limit with profiles', function(t) {
 
 test('query.count() .since', function(t) {
 	t.plan(3)
-	client.query.count({ since: startTime }, cb)
+	client.query.count({ since: startTime - 10000 }, cb)
 
 	function cb(err, res, body) {
 		t.error(err, 'no error')
