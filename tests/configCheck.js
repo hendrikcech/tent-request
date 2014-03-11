@@ -1,4 +1,4 @@
-var c = readConfig('./config')
+var c = require('./config')
 
 if(!c.meta || !c.meta.entity || !c.meta.servers
 	|| !c.meta.servers[0].urls
@@ -8,14 +8,4 @@ if(!c.meta || !c.meta.entity || !c.meta.servers
 	|| !c.type) {
 
 	throw new Error('somethings missing from the config file')
-}
-
-
-function readConfig(path) {
-	try {
-		var config = require(path)
-		return config
-	} catch(e) {
-		throw new Error('config file not found')
-	}
 }
