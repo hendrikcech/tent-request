@@ -8,14 +8,17 @@ var startTime
 var ids = []
 
 test('setup', function(t) {
-	startTime = Date.now()
-
 	var num = 4
 	t.plan(num)
 	for(var i = 0; i < num; i++) {
 		client.create(config.type, function(err, res, body) {
 			if(err) t.fail(err)
 			else t.pass('dummy post created')
+
+			if(!startTime) {
+				startTime = body.post.published_at - 100
+			}
+
 			ids.push(body.post.id)
 		})
 	}
@@ -35,7 +38,7 @@ test('query() .since', function(t) {
 	t.plan(2)
 	// try to even out potential time differences
 	// (I experienced those with cupcake)
-	client.query({ since: startTime - 10000 }, cb)
+	client.query({ since: startTime }, cb)
 
 	function cb(err, res, body) {
 		t.error(err, 'no error')
@@ -55,7 +58,7 @@ test('query() .limit with profiles', function(t) {
 
 test('query.count() .since', function(t) {
 	t.plan(3)
-	client.query.count({ since: startTime - 10000 }, cb)
+	client.query.count({ since: startTime }, cb)
 
 	function cb(err, res, body) {
 		t.error(err, 'no error')
