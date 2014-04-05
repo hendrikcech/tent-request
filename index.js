@@ -84,14 +84,12 @@ module.exports = function createClient(meta, auth) {
 	if(!meta.servers || !meta.entity)
 		throw new Error('meta post needs at least a list of servers and an entity')
 
-	if(meta.servers.length > 1) {
-		// select server with lowest preference number
-		meta.servers = meta.servers.sort(function(a,b) {
-			if (a.preference < b.preference) return -1
-			else if (a.preference == b.preference) return 0
-			else return 1
-		})
-	}
+	// select server with lowest preference number
+	meta.servers.sort(function(a,b) {
+		if(a.preference < b.preference) return -1
+		if(a.preference > b.preference) return 1
+		return 0
+	})
 
 	if(!auth) return new Client(meta, auth)
 
