@@ -1,8 +1,14 @@
 var request = require('..')
-var config = require('../test/config.json')
+var config = require('../tests/config')
+
+var id = process.argv[2]
+if(!id) {
+	console.error('usage: node get.js postid')
+	process.exit(1)
+}
 
 var client = request(config.meta, config.auth)
-var req = client.delete('j3zIT8syGRRA8eO7p9Dm1w', cb)
+var req = client.delete(id, cb)
 
 function cb(err, res, body) {
 	if(err) return console.error(err)
