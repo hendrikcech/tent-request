@@ -1,0 +1,13 @@
+--{boundary}
+Content-Disposition: form-data; name="post"; filename="post.json"
+Content-Type: application/vnd.tent.post.v0+json; type="https://custom.type/v0#"
+Content-Length: 47
+
+{"type":"https://custom.type/v0#","content":{}}
+--{boundary}
+Content-Disposition: form-data; name="data[0]"; filename="some.data"
+Content-Type: application/random
+Content-Length: 27
+
+random streaming attachment
+--{boundary}--

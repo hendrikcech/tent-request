@@ -8,7 +8,7 @@ var ids = []
 
 test('create(type, cb)', function(t) {
 	t.plan(3)
-	client.create(config.type, function(err, res, body) {
+	var req = client.create(config.type, function(err, res, body) {
 		t.error(err, 'no error')
 		t.ok(res)
 		t.equal(body.post.type, config.type)

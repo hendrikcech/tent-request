@@ -1,7 +1,6 @@
-/*
-you can use tent-discover and tent-auth to obtain this information from
-your test tent server
-*/
+// You can use tent-discover and tent-auth to obtain this information from
+// your test Tent server.
+
 module.exports = {
 	"meta": {
 		"entity": "",

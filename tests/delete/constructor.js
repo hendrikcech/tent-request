@@ -1,26 +1,25 @@
 var test = require('tape')
 var config = require('../config')
-var del = require('../../lib/delete').checkArgs
+var del = require('../../lib/delete')
 
+var meta = config.meta
 var id = 'abc321'
-var opts = { version: 'rndVer' }
-var cb = new Function
+var opts = { version: 'rndVer', createDeletePost: false }
 
 test('del() throws', function(t) {
-	t.throws(del)
+	t.throws(del.bind(del, meta))
 	t.end()
 })
 
-var tests = {
-	'id': [id, null, null],
-	'id, opts': [id, opts, null],
-	'id, cb': [id, null, cb],
-	'id, opts, cb': [id, opts, cb]
-}
+test('id', function(t) {
+	var req = del(meta, id)
+	t.ok(req.url.indexOf(id) > -1, 'id set')
+	t.end()
+})
 
-for(var key in tests) {
-	test('del(' + key + ')', function(key, t) {
-		t.deepEqual(eval('del(' + key + ')'), tests[key])
-		t.end()
-	}.bind(null, key))
-}
+test('opts: version and createDeletePost', function(t) {
+	var req = del(meta, id, opts)
+	t.ok(req.url.indexOf('version='+opts.version) > -1, 'version set')
+	t.equal(req.headers['Create-Delete-Post'], false, 'createDeletePost')
+	t.end()
+})

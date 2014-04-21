@@ -1,0 +1,20 @@
+--{boundary}
+Content-Disposition: form-data; name="post"; filename="post.json"
+Content-Type: application/vnd.tent.post.v0+json; type="https://custom.type/v0#"
+Content-Length: 47
+
+{"type":"https://custom.type/v0#","content":{}}
+--{boundary}
+Content-Disposition: form-data; name="text[0]"; filename="textOne.txt"
+Content-Type: text/plain
+Content-Length: 24
+
+Some Text
+And a bit more
+--{boundary}
+Content-Disposition: form-data; name="text[1]"; filename="textTwo.txt"
+Content-Type: text/plain
+Content-Length: 12
+
+Another text
+--{boundary}--
