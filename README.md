@@ -2,7 +2,33 @@
 A javascript module for talking to [Tent](https://tent.io) servers. It supports the current version 0.3.
 Thanks to [browserify](https://github.com/substack/node-browserify) this module can also be used in the browser.
 
-## install
+<!-- START doctoc generated TOC please keep comment here to allow auto update -->
+<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
+**Table of Contents**  *generated with [DocToc](http://doctoc.herokuapp.com/)*
+
+- [install](#install)
+- [usage](#usage)
+	- [client.create](#clientcreate)
+		- [metadata](#metadata)
+	- [client.get](#clientget)
+		- [options](#options)
+		- [sub functions](#sub-functions)
+	- [client.update](#clientupdate)
+	- [client.query](#clientquery)
+		- [query object](#query-object)
+		- [options](#options-1)
+		- [client.query.count](#clientquerycount)
+	- [client.delete](#clientdelete)
+		- [options](#options-2)
+	- [client.batch](#clientbatch)
+	- [callback](#callback)
+	- [pagination](#pagination)
+- [test](#test)
+- [license](#license)
+
+<!-- END doctoc generated TOC please keep comment here to allow auto update -->
+
+# install
 With npm:
 	
 	npm install tent-request --save
@@ -17,40 +43,13 @@ Create a new client for each user with a meta post and auth credentials. The sec
 This library has no support for retrieving meta posts. You could use [tent-discover](https://github.com/hendrikcech/tent-discover) for this (hint hint).  
 `auth` has to be an object with keys named `id` OR `access_token`, `key` OR `hawk_key` and `algorithm` OR `hawk_algorithm`. You could use [tent-auth](https://github.com/hendrikcech/tent-auth) to get the credentials.
 
-## methods
-`client` exposes several functions to interact with the users' Tent server.
-If you have questions regarding the specific behaviour of some of those methods, don't be afraid to look in the source, it's pretty basic.
-
-### result (callback)
-All functions optionally take a callback as the last argument, which gets called after the full response is received.  
-The `err` variable is null, unless `http.request()` emits an error or the response status code is not 200.  
-The `response` object is forwarded from the underlying `response` event emitted by [`http.ClientRequest`](http://nodejs.org/api/http.html#http_class_http_clientrequest). It's an instance of [http.IncomingMessage](http://nodejs.org/api/http.html#http_http_incomingmessage). It has information about the response, such as the response status code and headers.  
-`body` either contains the JSON decoded response or a number, if the count of a post list was requested.
-
-```javascript
-function callback(err, response, body) {
-	if(err) return console.error(err)
-	console.log('response with ' + response.statusCode)
-	console.log(body)
-}
-```
-
-Regardless of the callback, all functions return a [http.ClientRequest](http://nodejs.org/api/http.html#http_class_http_clientrequest) object. You can listen for the `response` event to catch the data.
-This will likely change in future versions.
-
-```javascript
-().on('response', function(response) {
-	response.pipe(process.stdout)
-})
-```
-
-### .create
+## client.create
 
 	client.create(type[, metadata][, content][, cb])
 
 Use this function to create a new post. All paramaters except the type are optional. Information about the post schema can be found [in the official docs](https://tent.io/docs/posts#post-schema).
 
-#### metadata
+### metadata
 The metadata object can contain `publishedAt`, `licenses`, `permissions`, `mentions` and `attachments` keys.
 
 ```javascript
@@ -117,21 +116,21 @@ To add an attachment to a post, pass one or more (inside an array) attachment ob
 `data` can either be a string, a buffer or a stream. If `data` is a stream, you have to provide the attachment size (will be used for the Content-Length header).  
 The `name`, `type` and `category` fields are required.
 
-### .get
+## client.get
 
 	client.get(id[, entity][, opts][, callback])
 
 Use this function to interact with a specific post from the [`post` server endpoint](https://tent.io/docs/api#post).  
 `get()` requires the `id` of the post to fetch. If no entity is passed as the second parameter, the function will try to get a post with the given id from the current entity.
 
-**Opts Object**
+### options
 
 key | description | example
 --- | --- | ---
 version | Set to interact with a specific version. By default the latest version will be picked. | `{ version: 'aB8mjnxlIeJ8n2tP5ztp' }`
 profiles | Set to one or more of these values to get the relevant profiles: `entity`, `refs`, `mentions`, `permissions`, `parents` or `all`. `all` is an shortcut and replaced by the other values. | `{ profiles: ['entity', 'mentions'] }` `{ profiles: 'all' }`
 
-**sub functions**  
+### sub functions
 These subfunctions take the same arguments as the base function.
 
 function | description
@@ -148,7 +147,7 @@ client.get.mentions.count('id')
 ...
 ```
 
-### .update
+## client.update
 
 	client.update(id, parent, type[, metadata][, content][, callback])
 
@@ -158,14 +157,14 @@ Pass the id of the post to update as the first argument. A second argument is re
 
 In addition to the already known metadata you can set `versionPublishedAt` and `versionMessage`. `publishedAt` can not be changed.
 
-### .query
+## client.query
 
 	([query][, opts][, callback])
 
 This method communicates with the `posts_feed` server endpoint and can be used to filter posts by certain criteria. More information can be found [here](https://tent.io/docs/api#postsfeed).  
 The query endpoint will undergo big changes with Tent 0.4.
 
-**query object**  
+### query object
 The posts feed can be filtered by the following parameters.
 
 key | description | example
@@ -179,31 +178,31 @@ types | Specify the types of the returned posts. | `{ types: 'http://ty.pe' }` `
 entities | Filter by the publishing entity. | `{ entities: 'http://one.entity' }` `{ entities: ['https://or.more', 'http://than.one'] }`
 mentions | Query by mentions. Supports AND and OR operators. Entities in one array are connected by AND operators, commata represent ORs. | `{ mentions: [['http://enti.ty' + '+id',/*AND*/ 'https://enti.ty'], /*OR*/ 'http://pet.er'] }`
 
-**Opts Object**
+### options
 
 key | description | example
 --- | --- | ---
 profiles | Set to one or more of these values to get the relevant profiles: `entity`, `refs`, `mentions`, `permissions`, `parents` or `all`. `all` is an shortcut and replaced by the other values. | `{ profiles: ['entity', 'mentions'] }` `{ profiles: 'all' }`
 maxRefs | Set the maximum number of included refs. | `{ maxRefs: 5 }`
 
-**Count**  
+### client.query.count
 To get the number of posts matched, call the subfunction `count`. Be aware that the actual posts won't be returned.
 
 	.count([query][, opts][, callback])
 
-### .delete
+## client.delete
 This simple function can be used to delete specific posts. The `id` parameter is required.
 
 	client.delete(id[, opts][, callback])
 
-**opts object**
+### options
 
 key | description | example
 --- | --- | ---
 version | Only delete a specific version. | `{ version: 'versionId' }`
 createDeletePost | Control if a [delete post](https://tent.io/docs/post-types#delete) should be created. Server default: true. | `{ createDeletePost: false }`
 
-### .batch
+## client.batch
 The Tent protocol supports batch requests. This enables you to perform multiple logical requests in one round-trip. More information can be found in this [Github issue](https://github.com/tent/tent.io/issues/177).  
 Note: At the time of writing this, the biggest Tent host  [Cupcake](https://cupcake.io) does not support batch requests.
 
@@ -221,7 +220,30 @@ The batch object exposes the same functions as the main client object. Individua
 Send the batch request off by calling the `end` method. The error and response objects contain information concerning the batch request itself. They are not about the individual requests.  
 `body` is an array containing objects with error, res and body keys. The array is sorted by the order in which the requests were added to the batch object. The response to the delete request in the example above can therefore be found in `body[1]`.
 
-### pagination
+## callback
+All functions optionally take a callback as the last argument, which gets called after the full response is received.  
+The `err` variable is null, unless `http.request()` emits an error or the response status code is not 200.  
+The `response` object is forwarded from the underlying `response` event emitted by [`http.ClientRequest`](http://nodejs.org/api/http.html#http_class_http_clientrequest). It's an instance of [http.IncomingMessage](http://nodejs.org/api/http.html#http_http_incomingmessage). It has information about the response, such as the response status code and headers.  
+`body` either contains the JSON decoded response or a number, if the count of a post list was requested.
+
+```javascript
+function callback(err, response, body) {
+	if(err) return console.error(err)
+	console.log('response with ' + response.statusCode)
+	console.log(body)
+}
+```
+
+Regardless of the callback, all functions return a [http.ClientRequest](http://nodejs.org/api/http.html#http_class_http_clientrequest) object. You can listen for the `response` event to catch the data.
+This will likely change in future versions.
+
+```javascript
+query().on('response', function(response) {
+	response.pipe(process.stdout)
+})
+```
+
+## pagination
 All post lists support pagination. This includes the results of the `query`, `get.mentions`, `get.versions` and `get.childVersions` functions. The methods to retrieve other pages are bound to the context of the callback.
 There are `this.next`, `this.prev`, `this.first` and `this.last` functions, if the corresponding pages are available.
 
