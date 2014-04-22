@@ -14,7 +14,7 @@
     "url": "https://github.com/hendrikcech/tent-request.git"
   },
   "scripts": {
-    "pretest": "node ./tests/configCheck.js",
+    "pretest": "node ./tests/config.js",
     "test": "tape ./tests/*/*.js",
     "build": "rm -rf node_modules/dicer/node_modules/readable-stream && browserify index.js -s request --ignore debug --ignore-missing | uglifyjs > umd.min.js"
   },
@@ -31,6 +31,7 @@
     "http-string-parser": "0.0.4"
   },
   "devDependencies": {
-    "tape": "~2.12.0"
+    "tape": "~2.12.0",
+    "tent-discover": "^0.3.0"
   }
 }

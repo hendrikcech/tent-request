@@ -257,7 +257,7 @@ There are `this.next`, `this.prev`, `this.first` and `this.last` functions, if t
 This code snippet would log all posts that are saved on a Tent server.
 
 # test
-Duplicate `tests/config.template.js`, rename the file to `config.js` and populate it. The app must be authorized to read and write the type defined in the config file and `https://tent.io/types/delete/v0#`.  
+Duplicate `tests/config.template.json`, rename the file to `config.json` and populate it. You can define multiple hosts and determine which one to use by setting the HOST env variable. The app must be authorized to read and write the type defined in the config file and `https://tent.io/types/delete/v0#`.  
 Then do
 
 	npm test

@@ -1,0 +1,12 @@
+{
+	"cupcake": {
+		"entity": "test entity",
+		"auth": {
+		    "access_token": "",
+		    "hawk_key": "",
+		    "hawk_algorithm": "sha256",
+		    "token_type": "https://tent.io/oauth/hawk-token"
+		}
+	},
+	"type": "https://custom.type/v0#"
+}

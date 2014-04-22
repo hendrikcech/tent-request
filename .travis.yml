@@ -1,0 +1,11 @@
+language: node_js
+node_js:
+- '0.8'
+- '0.10'
+before_install: npm install npm -g
+before_script: cp tests/config.template.json tests/config.json
+env:
+  global:
+  - secure: GNubroMWMeYGEDavB6Y63olI/l71tFyK/cKSnqbT9Yb6GJCuWIMvkVq6i8RUm3MluAMNbXQfYy/7e0wzJ03UOC3lAIac7bG4oASy8dUKDDhZNXCWqFGuqbZ4E2wJMP/k1hPQxGx2QAAgdZIh5EcYIzKGs1qTzpqUVRuKwQ1PQOw=
+  - secure: johHszciWg9GRYwTT0IHGhhxBZgGaFlgRjZtdnV7tpdTPM81GKBKi/zpGmkYUcCgYfyVJkrTpnbW6e83diEZk4kYjHKagYeEC6vBeJFXReuVwNqDnSoU4nZ4WsJRn2eC5w6P2ACGC8hywh9zZErZZLBEH0nzByuuZBNXbR7ADhc=
+  - secure: HyhuALORLQBfmqHKLYLyPR+/35BbrR6MlHcGJ2JzZsR1UZG99bzpHMEwQAH5JEY70xhTVfpaYy90JzhVWp1DY2Hj2EAos6qTSJnlZDF1w2BHssAaP021Ln4ileh9lx29bRl+btOCeDR8cgzRBETGh3LLeOMQXSy0uHl7Iv+/Hvs=

@@ -1,4 +1,4 @@
 node_modules
 .DS_STORE
-config.js
+config.json
 umd.min.js
