@@ -14,8 +14,9 @@
     "url": "https://github.com/hendrikcech/tent-request.git"
   },
   "scripts": {
-    "pretest": "node ./tests/config.js",
-    "test": "tape ./tests/*/*.js",
+    "pretest": "node tests/config.js",
+    "test": "tape tests/*/*.js",
+    "test-browser": "npm run pretest && browserify -t brfs tests/*/*.js --ignore-missing | testling -u",
     "build": "rm -rf node_modules/dicer/node_modules/readable-stream && browserify index.js -s request --ignore debug --ignore-missing | uglifyjs > umd.min.js"
   },
   "author": {

@@ -15,12 +15,15 @@ if(!(config = userConfig[configKey])) {
 
 var configSave = JSON.parse(JSON.stringify(config))
 
+// example:
+// CUPCAKE_ACCESS_TOKEN > ACCESS_TOKEN > auth.access_token > auth.id
+
 var auth = config.auth = config.auth || {}
 config.auth = {
-	id: process.env.ACCESS_TOKEN || auth.access_token || auth.id,
-	key: process.env.HAWK_KEY || auth.hawk_key || auth.key,
-	algorithm: process.env.ALGORITHM || auth.algorithm || "sha256",
-	token_type: process.env.TOKEN_TYPE || auth.token_type || "https://tent.io/oauth/hawk-token"
+	id: entityEnvVar('ACCESS_TOKEN') || process.env.ACCESS_TOKEN || auth.access_token || auth.id,
+	key: entityEnvVar('HAWK_KEY') || process.env.HAWK_KEY || auth.hawk_key || auth.key,
+	algorithm: entityEnvVar('ALGORITHM') || process.env.ALGORITHM || auth.algorithm || "sha256",
+	token_type: entityEnvVar('TOKEN_TYPE') || process.env.TOKEN_TYPE || auth.token_type || "https://tent.io/oauth/hawk-token"
 }
 
 if(!config.auth.id) {
@@ -31,7 +34,7 @@ if(!config.auth.key) {
 }
 
 if(!config.meta) {
-	var entity = process.env.ENTITY || config.entity
+	var entity = entityEnvVar('ENTITY') || process.env.ENTITY || config.entity
 	if(!entity) {
 		throw new Error('either "meta" or "entity" key required')
 	}
@@ -54,3 +57,7 @@ if(!config.type) {
 }
 
 module.exports = config
+
+function entityEnvVar(name) {
+	return process.env[configKey.toUpperCase() + '_' + name]
+}

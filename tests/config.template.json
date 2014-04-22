@@ -8,5 +8,6 @@
 		    "token_type": "https://tent.io/oauth/hawk-token"
 		}
 	},
+	"campr": {},
 	"type": "https://custom.type/v0#"
 }

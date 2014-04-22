@@ -1,11 +1,16 @@
 language: node_js
 node_js:
-- '0.8'
 - '0.10'
 before_install: npm install npm -g
 before_script: cp tests/config.template.json tests/config.json
+script:
+- HOST=cupcake npm test
+- HOST=campr npm test
 env:
   global:
-  - secure: GNubroMWMeYGEDavB6Y63olI/l71tFyK/cKSnqbT9Yb6GJCuWIMvkVq6i8RUm3MluAMNbXQfYy/7e0wzJ03UOC3lAIac7bG4oASy8dUKDDhZNXCWqFGuqbZ4E2wJMP/k1hPQxGx2QAAgdZIh5EcYIzKGs1qTzpqUVRuKwQ1PQOw=
-  - secure: johHszciWg9GRYwTT0IHGhhxBZgGaFlgRjZtdnV7tpdTPM81GKBKi/zpGmkYUcCgYfyVJkrTpnbW6e83diEZk4kYjHKagYeEC6vBeJFXReuVwNqDnSoU4nZ4WsJRn2eC5w6P2ACGC8hywh9zZErZZLBEH0nzByuuZBNXbR7ADhc=
-  - secure: HyhuALORLQBfmqHKLYLyPR+/35BbrR6MlHcGJ2JzZsR1UZG99bzpHMEwQAH5JEY70xhTVfpaYy90JzhVWp1DY2Hj2EAos6qTSJnlZDF1w2BHssAaP021Ln4ileh9lx29bRl+btOCeDR8cgzRBETGh3LLeOMQXSy0uHl7Iv+/Hvs=
+  - secure: Nmes456+fFTDIZx0VQYkFhRLIw3fqLTzKOtsKwCatBr02Vt7u4xdKuqP7iKr1Hb7z0ERE+8AkA8UvWvB4FAzTpRTyYwG574v5ZnnE4VfsHAW55cxOpwYiQ6R0sklyHdzTelWU5CdnhIKD2QKx1EwqlHvEyiQd9b4s6i3vQRd3t8=
+  - secure: viOp/0MK0BBrcNIwy3L2i5m8WPRIdIuUXq7hnIKSDnI1tXp/U1/eI0Hkll+rWhhFK9Qj76dn8qil18wlsvs9Cb3Vj4EhYakKDbijLHFwud/FuKh5tGL3RvI44yfpqsxn7CZZTvbES7J/gAP09skSwoEDVhFVh2qXtoQieHhsDo0=
+  - secure: palMdmetrTIt89/z3fLAjJWwu+KseC1csS7tN6tWVHyMvJOEoa1TZ0zg2Ner7kqOVDGD3hTpzn/o8nnT13pjmq3XlWSUxs5MX4n5Jn4Wc34sOGH8Hja5TomXfQKehYYIWl7BQOBHXqyPJ6+58+zcAqdZA5/VTbKbL8Nb6x4R+hk=
+  - secure: a6deNHncqSVpBM/SsVQHi0nwmKtTkhb9NQ1bAz9x7DBDff9VYMjHvSwJcS5KxOY6r7ljs5feLjKeEDXwIDBRhqPzUeZnA9lr2Yi9/Bj39xtLZQnUVF81W03MxWxl5sW7Vss8UZwfogyzJVC6BFtxjnlQO3+HGlvy9nBFNW5v3ng=
+  - secure: C2MbmCn9YQwLf3LDXS2+rrgto5TGTZQ67yts+8OhydUR3zGpjqGY0q8nJTAPtFaUtLtsQEBqHkHsD1LHFuYxWjYeuJaBdDyY8x+mGmiu5ZBJ6NvDLHlzngz4jaBCYxfJSLPKLsyMtObpy0ipFcUzgLqtCOU4DzLwlHBsf3FpyCE=
+  - secure: La+WytuFwLakY+fCIYFuXEKsoG1BPwGdVlaF22PZdAi3+NTzHjFJ6/BQIe4LWI1XSrtrJa8yRKHswNpHjFm5ejNjf5PzTG2SHaPhti8GSTroQ/tfNIIe0nC7UAwWPQA4PcLibKNDpGIqkOHF9uhjq/Uj5mN7p1fZtWftueg05W8=

@@ -68,6 +68,12 @@ test('query.count() .since', function(t) {
 })
 
 test('pagination', function(t) {
+	// camprs pagination implementation is not stable enough yet
+	if(config.meta.entity.indexOf('campr.me') > -1) {
+		t.pass('pagination integration tests skipped')
+		return t.end()
+	}
+
 	t.plan(3 * 3 + 2 + 2 + 1)
 
 	client.query({ limit: 2 }, cb)
