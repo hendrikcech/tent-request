@@ -1,4 +1,4 @@
-# tent-request
+# tent-request [![build status](https://secure.travis-ci.org/hendrikcech/tent-request.png)](http://travis-ci.org/hendrikcech/tent-request)
 A javascript module for talking to [Tent](https://tent.io) servers. It supports the current version 0.3.
 Thanks to [browserify](https://github.com/substack/node-browserify) this module can also be used in the browser.
 
